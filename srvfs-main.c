@@ -152,8 +152,17 @@ err:
 	return 0;
 }
 
-static const struct super_operations simple_super_operations = {
+static void srvfs_evict_inode(struct inode *inode)
+{
+	pr_info("srvfs_evict_inode()\n");
+	clear_inode(inode);
+	if (inode->i_private)
+		kfree(inode->i_private);
+}
+
+static const struct super_operations srvfs_super_operations = {
 	.statfs	= simple_statfs,
+	.evict_inode	= srvfs_evict_inode,
 };
 
 /*
@@ -168,7 +177,7 @@ static int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	sb->s_blocksize = PAGE_SIZE;
 	sb->s_blocksize_bits = PAGE_SHIFT;
 	sb->s_magic = SRVFS_MAGIC;
-	sb->s_op = &simple_super_operations;
+	sb->s_op = &srvfs_super_operations;
 	sb->s_time_gran = 1;
 
 	inode = new_inode(sb);
