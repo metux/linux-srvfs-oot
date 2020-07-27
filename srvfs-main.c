@@ -27,10 +27,6 @@ struct srvfs_inode {
 
 
 /*
- * The operations on our "files".
- */
-
-/*
  * Open a file.  All we have to do here is to copy over a
  * copy of the counter pointer so it's easier to get at.
  */
@@ -38,7 +34,8 @@ static int srvfs_open(struct inode *inode, struct file *filp)
 {
 	if (inode->i_ino > NCOUNTERS)
 		return -ENODEV;  /* Should never happen.  */
-	filp->private_data = counters + inode->i_ino - 1;
+	filp->private_data = inode->i_private;
+//	filp->private_data = counters + inode->i_ino - 1;
 	return 0;
 }
 
@@ -54,15 +51,16 @@ static ssize_t srvfs_read_file(struct file *filp, char *buf,
 {
 	int v, len;
 	char tmp[TMPSIZE];
-	atomic_t *counter = (atomic_t *) filp->private_data;
+	struct srvfs_inode *priv = filp->private_data;
+
 	/*
 	 * Encode the value, and figure out how much of it we can pass back.
 	 */
-	v = atomic_read(counter);
+	v = atomic_read(&priv->counter);
 	if (*offset > 0)
 		v -= 1;  /* the value returned when offset was zero */
 	else
-		atomic_inc(counter);
+		atomic_inc(&priv->counter);
 	len = snprintf(tmp, TMPSIZE, "%d\n", v);
 	if (*offset > len)
 		return 0;
@@ -85,7 +83,8 @@ static ssize_t srvfs_write_file(struct file *filp, const char *buf,
 {
 	char tmp[TMPSIZE];
 	long fd_id;
-	atomic_t *counter = (atomic_t *) filp->private_data;
+	struct srvfs_inode *priv = filp->private_data;
+
 	/*
 	 * Only write from the beginning.
 	 */
@@ -104,7 +103,7 @@ static ssize_t srvfs_write_file(struct file *filp, const char *buf,
 	 */
 	fd_id = simple_strtol(tmp, NULL, 10);
 	pr_info("requested to assign fd %ld\n", fd_id);
-	atomic_set(counter, simple_strtol(tmp, NULL, 10));
+	atomic_set(&priv->counter, simple_strtol(tmp, NULL, 10));
 	return count;
 }
 
@@ -155,6 +154,7 @@ static int srvfs_create_file (struct super_block *sb, struct dentry *root, const
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_fop = &srvfs_file_ops;
 	inode->i_ino = idx;
+	inode->i_private = priv;
 
 	d_add(dentry, inode);
 	return 1;
