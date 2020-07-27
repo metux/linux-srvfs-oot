@@ -121,26 +121,17 @@ static struct file_operations srvfs_file_ops = {
  * OK, create the files that we export.
  */
 struct tree_descr OurFiles[] = {
-	{ NULL, NULL, 0 },  /* Skipped */
 	{
 		.name = "counter0",
-		.ops = &srvfs_file_ops,
-		.mode = S_IWUSR|S_IRUGO
 	},
 	{
 		.name = "counter1",
-		.ops = &srvfs_file_ops,
-		.mode = S_IWUSR|S_IRUGO
 	},
 	{
 		.name = "counter2",
-		.ops = &srvfs_file_ops,
-		.mode = S_IWUSR|S_IRUGO
 	},
 	{
 		.name = "counter3",
-		.ops = &srvfs_file_ops,
-		.mode = S_IWUSR|S_IRUGO
 	},
 	{ "", NULL, 0 }
 };
@@ -224,16 +215,7 @@ static int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	}
 
 	for (i = 0; !files->name || files->name[0]; i++, files++) {
-		if (!files->name)
-			continue;
-
-		/* warn if it tries to conflict with the root inode */
-		if (unlikely(i == 1))
-			pr_warn("%s: %s passed in a files array"
-				"with an index of 1!\n", __func__,
-				sb->s_type->name);
-
-		if (!srvfs_create_file(sb, root, files->name, i))
+		if (!srvfs_create_file(sb, root, files->name, i+1))
 			goto out;
 	}
 	sb->s_root = root;
