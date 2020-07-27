@@ -8,34 +8,23 @@
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
 
-/*
- * Boilerplate stuff.
- */
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("mtx");
 
 #define SRVFS_MAGIC 0x19980123
-
-#define NCOUNTERS 4
-static atomic_t counters[NCOUNTERS];
-
 
 struct srvfs_inode {
 	atomic_t counter;
 	int mode;
 };
 
-
-/*
- * Open a file.  All we have to do here is to copy over a
- * copy of the counter pointer so it's easier to get at.
- */
-static int srvfs_open(struct inode *inode, struct file *filp)
+static int srvfs_open_file(struct inode *inode, struct file *filp)
 {
-	if (inode->i_ino > NCOUNTERS)
-		return -ENODEV;  /* Should never happen.  */
 	filp->private_data = inode->i_private;
-//	filp->private_data = counters + inode->i_ino - 1;
+	return 0;
+}
+
+static int srvfs_close_file(struct inode *inode, struct file *filp)
+{
+	pr_info("closing\n");
 	return 0;
 }
 
@@ -111,9 +100,10 @@ static ssize_t srvfs_write_file(struct file *filp, const char *buf,
  * Now we can put together our file operations structure.
  */
 static struct file_operations srvfs_file_ops = {
-	.open	= srvfs_open,
-	.read	= srvfs_read_file,
-	.write	= srvfs_write_file,
+	.open		= srvfs_open_file,
+	.read		= srvfs_read_file,
+	.write		= srvfs_write_file,
+	.release	= srvfs_close_file,
 };
 
 const char *names[] = {
@@ -127,7 +117,6 @@ const char *names[] = {
  * Superblock stuff.  This is all boilerplate to give the vfs something
  * that looks like a filesystem to work with.
  */
-
 static int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* name, int idx)
 {
 	struct dentry *dentry;
@@ -223,7 +212,7 @@ struct dentry *srvfs_mount(struct file_system_type *fs_type,
 	return mount_nodev(fs_type, flags, data, srvfs_fill_super);
 }
 
-static struct file_system_type lfs_type = {
+static struct file_system_type srvfs_type = {
 	.owner 		= THIS_MODULE,
 	.name		= "srvfs",
 	.mount		= srvfs_mount,
@@ -232,17 +221,16 @@ static struct file_system_type lfs_type = {
 
 static int __init srvfs_init(void)
 {
-	int i;
-
-	for (i = 0; i < NCOUNTERS; i++)
-		atomic_set(counters + i, 0);
-	return register_filesystem(&lfs_type);
+	return register_filesystem(&srvfs_type);
 }
 
 static void __exit srvfs_exit(void)
 {
-	unregister_filesystem(&lfs_type);
+	unregister_filesystem(&srvfs_type);
 }
 
 module_init(srvfs_init);
 module_exit(srvfs_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("mtx");
