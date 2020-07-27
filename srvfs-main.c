@@ -229,9 +229,9 @@ static int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 
 		/* warn if it tries to conflict with the root inode */
 		if (unlikely(i == 1))
-			printk(KERN_WARNING "%s: %s passed in a files array"
+			pr_warn("%s: %s passed in a files array"
 				"with an index of 1!\n", __func__,
-			sb->s_type->name);
+				sb->s_type->name);
 
 		if (!srvfs_create_file(sb, root, files->name, i))
 			goto out;
