@@ -108,7 +108,7 @@ static ssize_t srvfs_write_file(struct file *filp, const char *buf,
 /*
  * Now we can put together our file operations structure.
  */
-static struct file_operations lfs_file_ops = {
+static struct file_operations srvfs_file_ops = {
 	.open	= srvfs_open,
 	.read	= srvfs_read_file,
 	.write	= srvfs_write_file,
@@ -121,22 +121,22 @@ struct tree_descr OurFiles[] = {
 	{ NULL, NULL, 0 },  /* Skipped */
 	{
 		.name = "counter0",
-		.ops = &lfs_file_ops,
+		.ops = &srvfs_file_ops,
 		.mode = S_IWUSR|S_IRUGO
 	},
 	{
 		.name = "counter1",
-		.ops = &lfs_file_ops,
+		.ops = &srvfs_file_ops,
 		.mode = S_IWUSR|S_IRUGO
 	},
 	{
 		.name = "counter2",
-		.ops = &lfs_file_ops,
+		.ops = &srvfs_file_ops,
 		.mode = S_IWUSR|S_IRUGO
 	},
 	{
 		.name = "counter3",
-		.ops = &lfs_file_ops,
+		.ops = &srvfs_file_ops,
 		.mode = S_IWUSR|S_IRUGO
 	},
 	{ "", NULL, 0 }
@@ -147,12 +147,86 @@ struct tree_descr OurFiles[] = {
  * that looks like a filesystem to work with.
  */
 
+static int srvfs_create_file (struct super_block *sb, struct dentry *root, struct tree_descr *files, int idx)
+{
+	struct dentry *dentry;
+	struct inode *inode;
+
+	dentry = d_alloc_name(root, files->name);
+	if (!dentry)
+		goto out;
+	inode = new_inode(sb);
+	if (!inode) {
+		dput(dentry);
+		goto out;
+	}
+	inode->i_mode = S_IFREG | S_IWUSR | S_IRUGO;
+	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
+	inode->i_fop = &srvfs_file_ops;
+	inode->i_ino = idx;
+	d_add(dentry, inode);
+	return 0;
+out:
+	return 1;
+}
+
+static const struct super_operations simple_super_operations = {
+        .statfs         = simple_statfs,
+};
+
 /*
  * "Fill" a superblock with mundane stuff.
  */
-static int lfs_fill_super (struct super_block *sb, void *data, int silent)
+static int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 {
-	return simple_fill_super(sb, SRVFS_MAGIC, OurFiles);
+    struct inode *inode;
+    struct dentry *root;
+    int i;
+    struct tree_descr *files = OurFiles;
+
+    sb->s_blocksize = PAGE_SIZE;
+    sb->s_blocksize_bits = PAGE_SHIFT;
+    sb->s_magic = SRVFS_MAGIC;
+    sb->s_op = &simple_super_operations;
+    sb->s_time_gran = 1;
+
+    inode = new_inode(sb);
+    if (!inode)
+	return -ENOMEM;
+    /*
+     * because the root inode is 1, the files array must not contain an
+     * entry at index 1
+     */
+    inode->i_ino = 1;
+    inode->i_mode = S_IFDIR | 0755;
+    inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
+    inode->i_op = &simple_dir_inode_operations;
+    inode->i_fop = &simple_dir_operations;
+    set_nlink(inode, 2);
+    root = d_make_root(inode);
+    if (!root)
+	return -ENOMEM;
+
+    for (i = 0; !files->name || files->name[0]; i++, files++) {
+	if (!files->name)
+	    continue;
+
+	/* warn if it tries to conflict with the root inode */
+	if (unlikely(i == 1))
+	    printk(KERN_WARNING "%s: %s passed in a files array"
+		"with an index of 1!\n", __func__,
+		sb->s_type->name);
+
+	if (!srvfs_create_file(sb, root, files, i))
+		goto out;
+    }
+    sb->s_root = root;
+    return 0;
+out:
+    d_genocide(root);
+    shrink_dcache_parent(root);
+    dput(root);
+    return -ENOMEM;
 }
 
 /*
@@ -161,7 +235,7 @@ static int lfs_fill_super (struct super_block *sb, void *data, int silent)
 struct dentry *srvfs_mount(struct file_system_type *fs_type,
 			   int flags, const char *dev_name, void *data)
 {
-	return mount_nodev(fs_type, flags, data, lfs_fill_super);
+	return mount_nodev(fs_type, flags, data, srvfs_fill_super);
 }
 
 static struct file_system_type lfs_type = {
