@@ -117,23 +117,11 @@ static struct file_operations srvfs_file_ops = {
 	.write	= srvfs_write_file,
 };
 
-/*
- * OK, create the files that we export.
- */
-struct tree_descr OurFiles[] = {
-	{
-		.name = "counter0",
-	},
-	{
-		.name = "counter1",
-	},
-	{
-		.name = "counter2",
-	},
-	{
-		.name = "counter3",
-	},
-	{ "", NULL, 0 }
+const char *names[] = {
+	"counter0",
+	"counter1",
+	"counter2",
+	"counter3",
 };
 
 /*
@@ -187,7 +175,6 @@ static int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	struct inode *inode;
 	struct dentry *root;
 	int i;
-	struct tree_descr *files = OurFiles;
 
 	sb->s_blocksize = PAGE_SIZE;
 	sb->s_blocksize_bits = PAGE_SHIFT;
@@ -214,8 +201,8 @@ static int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 		return -ENOMEM;
 	}
 
-	for (i = 0; !files->name || files->name[0]; i++, files++) {
-		if (!srvfs_create_file(sb, root, files->name, i+1))
+	for (i = 0; i<ARRAY_SIZE(names); i++) {
+		if (!srvfs_create_file(sb, root, names[i], i+1))
 			goto out;
 	}
 	sb->s_root = root;
