@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+. ./_test.sh
+
+TESTFILE=$TESTDIR/wurstbrot
+
+echo 0 > $TESTFILE
+
+cat /etc/hostname > $TESTFILE
+
+rm $TESTFILE

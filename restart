@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+. ./_test.sh
+
+do_unmount
+do_unload
+do_load
+do_mount
+do_list
+
+echo "OKAY"

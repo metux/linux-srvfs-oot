@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+
+. ./_test.sh
+
+TEST_BACKEND=/knollo
+TEST_FRONTEND=$TESTDIR/test-localfile
+
+log_info "assigning"
+tests/test-localfile $TESTDIR $TEST_BACKEND
+
+log_info "writing to backend"
+echo "written into backend" >> $TEST_BACKEND
+
+log_info "catting frontend file"
+cat $TEST_FRONTEND
+
+log_info "appending to frontend file"
+echo "written into frontend" >> $TEST_FRONTEND
+
+log_info "catting backend"
+cat $TEST_BACKEND
