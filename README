@@ -1,0 +1,41 @@
+Plan9 style /srv files system for posting file descriptors
+===========================================================
+
+srvfs is synthentic file system for "posting" open file descriptors back
+int the file system, so the can be opened and used from here. This is one
+of the vital concepts of Plan9.
+
+The primary use case is programs that "dial" some connection (eg. sockets),
+do some initial handshakes (eg. authentication) and publish the open fd
+into the file system, so other programs can get an open fd (via open())
+from here and continue using this connection.
+
+Another use case is selective crossing of security domains (eg. separate
+uid's): agents can open certain files (they're permitted to) on behalf
+of some clients, which don't have access to those files, and post open
+file descriptors into the file system, where the agent can easily pick
+them up.
+
+
+Building
+--------
+
+Usually, just running 'make' should be enough. The kernel module will be
+built against the currently running kernel, but not installed anywhere.
+The module then can be loaded via insmod(1).
+
+
+Using
+-----
+
+The driver adds the filesystem as "srvfs". It can be easily mounted via:
+
+mount none <target-dir> -t srvfs
+
+
+A program whishing to post an open fd, just has to open a new file within
+the srv file system and write the fd number (decimal printed) into it.
+The kernel driver then takes a reference to the (kernel-internal) file
+descriptor structure and redirect all file operations to this fd. The fd
+will be kept open, even if the original process terminates, until the
+file entry in srvfs is unlink()ed.
