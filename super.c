@@ -19,7 +19,7 @@ static const char *names[] = {
 
 static void srvfs_sb_evict_inode(struct inode *inode)
 {
-	pr_info("srvfs_evict_inode()\n");
+	pr_info("srvfs_evict_inode(): %ld\n", inode->i_ino);
 	clear_inode(inode);
 	if (inode->i_private)
 		kfree(inode->i_private);

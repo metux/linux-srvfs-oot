@@ -131,14 +131,14 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	inode->i_ino = srvfs_inode_id(inode->i_sb);
 	inode->i_private = priv;
 
-	insert_inode_hash(inode);
-	mark_inode_dirty(inode);
+//	insert_inode_hash(inode);
+//	mark_inode_dirty(inode);
 
 	pr_info("new inode id: %ld\n", inode->i_ino);
 
-
-//	d_add(dentry, inode);
-	d_instantiate(dentry, inode);
+	d_drop(dentry);
+	d_add(dentry, inode);
+//	d_instantiate(dentry, inode);
 	return 0;
 
 err_inode:

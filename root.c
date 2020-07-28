@@ -38,7 +38,7 @@ static int srvfs_dir_create (struct inode *inode, struct dentry *dentry, umode_t
 	else
 		pr_info("srvfs_dir_create() not exclusive\n");
 
-	ret = srvfs_insert_file(inode->i_sb, dentry);
+	ret = srvfs_insert_file(inode->i_sb, dget(dentry));
 	pr_info("srvfs_dir_create() returned: %d\n", ret);
 
 	return ret;
