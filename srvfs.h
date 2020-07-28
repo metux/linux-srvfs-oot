@@ -10,6 +10,7 @@ struct srvfs_inode {
 	atomic_t counter;
 	int mode;
 	struct dentry *dentry;
+	struct file *file;
 };
 
 struct srvfs_sb {

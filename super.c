@@ -5,6 +5,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <asm/atomic.h>
@@ -19,10 +20,22 @@ static const char *names[] = {
 
 static void srvfs_sb_evict_inode(struct inode *inode)
 {
+	struct srvfs_inode *priv = inode->i_private;
+
 	pr_info("srvfs_evict_inode(): %ld\n", inode->i_ino);
 	clear_inode(inode);
-	if (inode->i_private)
+	if (priv) {
+		pr_info("evict: freeing private data\n");
+		if (priv->file) {
+			pr_info("evict: freeing assigned file\n");
+			fput(priv->file);
+		} else {
+			pr_info("evict: no file stored\n");
+		}
 		kfree(inode->i_private);
+	} else {
+		pr_info("evict: no private data to free\n");
+	}
 }
 
 static void srvfs_sb_put_super(struct super_block *sb)

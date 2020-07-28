@@ -6,6 +6,7 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/fs.h>
+#include <linux/file.h>
 #include <linux/slab.h>
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
@@ -59,20 +60,33 @@ static ssize_t srvfs_file_read(struct file *filp, char *buf,
 	return count;
 }
 
-static void do_switch(struct file *filp)
+static void do_switch(struct file *filp, long fd)
 {
 	struct srvfs_inode *priv = filp->private_data;
-	pr_info("doing the switch\n");
-	d_delete(priv->dentry);
-	dput(priv->dentry);
-	priv->dentry = NULL;
+	pr_info("doing the switch: fd=%ld\n", fd);
+//	d_delete(priv->dentry);
+//	dput(priv->dentry);
+//	priv->dentry = NULL;
+
+	if (priv->file) {
+		pr_info("freeing existing file\n");
+		fput(priv->file);
+	}
+
+	priv->file = fget(fd);
+	if (!priv->file) {
+		pr_err("not an valid fd\n");
+		return;
+	}
+
+	pr_info("got valid fd. storing it\n");
 }
 
 static ssize_t srvfs_file_write(struct file *filp, const char *buf,
 				size_t count, loff_t *offset)
 {
 	char tmp[TMPSIZE];
-	long fd_id;
+	long fd;
 	struct srvfs_inode *priv = filp->private_data;
 
 	if (*offset != 0)
@@ -84,10 +98,9 @@ static ssize_t srvfs_file_write(struct file *filp, const char *buf,
 	if (copy_from_user(tmp, buf, count))
 		return -EFAULT;
 
-	fd_id = simple_strtol(tmp, NULL, 10);
-	pr_info("requested to assign fd %ld\n", fd_id);
-	if (fd_id == 666)
-		do_switch(filp);
+	fd = simple_strtol(tmp, NULL, 10);
+	pr_info("requested to assign fd %ld\n", fd);
+	do_switch(filp, fd);
 
 	atomic_set(&priv->counter, simple_strtol(tmp, NULL, 10));
 	return count;
@@ -106,7 +119,7 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	struct srvfs_inode *priv;
 	int mode = S_IFREG | S_IWUSR | S_IRUGO;
 
-	priv = kmalloc(sizeof(struct srvfs_inode), GFP_KERNEL);
+	priv = kzalloc(sizeof(struct srvfs_inode), GFP_KERNEL);
 	if (!priv) {
 		pr_err("srvfs_insert_file(): failed to malloc inode priv\n");
 		return -ENOMEM;
@@ -131,18 +144,11 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	inode->i_ino = srvfs_inode_id(inode->i_sb);
 	inode->i_private = priv;
 
-//	insert_inode_hash(inode);
-//	mark_inode_dirty(inode);
-
 	pr_info("new inode id: %ld\n", inode->i_ino);
 
 	d_drop(dentry);
 	d_add(dentry, inode);
-//	d_instantiate(dentry, inode);
 	return 0;
-
-err_inode:
-	iput(inode);
 
 err:
 	kfree(priv);
