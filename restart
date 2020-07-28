@@ -2,10 +2,16 @@
 
 mkdir -p /xs
 
+echo "unmounting"
 umount /xs
+echo "removing module"
 rmmod srvfs
 
+echo "inserting module"
 insmod srvfs.ko
+
+echo "mounting"
 mount none /xs -t srvfs
 
+echo "listing"
 ls -la /xs

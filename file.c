@@ -104,6 +104,7 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 {
 	struct inode *inode;
 	struct srvfs_inode *priv;
+	int mode = S_IFREG | S_IWUSR | S_IRUGO;
 
 	priv = kmalloc(sizeof(struct srvfs_inode), GFP_KERNEL);
 	if (!priv) {
@@ -121,15 +122,23 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	priv->mode = 0;
 	priv->dentry = dentry;
 
-	inode->i_mode = S_IFREG | S_IWUSR | S_IRUGO;
+	inode_init_owner(inode, sb->s_root->d_inode, mode);
+
+	// FIXME: still needed ?
+	inode->i_mode = mode;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_fop = &srvfs_file_ops;
 	inode->i_ino = srvfs_inode_id(inode->i_sb);
 	inode->i_private = priv;
 
+//	insert_inode_hash(inode);
+//	mark_inode_dirty(inode);
+
 	pr_info("new inode id: %ld\n", inode->i_ino);
 
-	d_add(dentry, inode);
+
+//	d_add(dentry, inode);
+	d_instantiate(dentry, inode);
 	return 0;
 
 err:
