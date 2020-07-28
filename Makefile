@@ -5,7 +5,8 @@ obj-m := srvfs.o
 srvfs-objs := \
 	srvfs-main.o \
 	file.o \
-	super.o
+	super.o \
+	root.o
 
 KVER := $(shell uname -r)
 KPATH := /lib/modules/$(KVER)/build

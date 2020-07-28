@@ -112,8 +112,10 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	}
 
 	inode = new_inode(sb);
-	if (!inode)
+	if (!inode) {
+		pr_err("srvfs_insert_file(): failed to allocate inode\n");
 		goto err;
+	}
 
 	atomic_set(&priv->counter, 0);
 	priv->mode = 0;
@@ -124,6 +126,8 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	inode->i_fop = &srvfs_file_ops;
 	inode->i_ino = srvfs_inode_id(inode->i_sb);
 	inode->i_private = priv;
+
+	pr_info("new inode id: %ld\n", inode->i_ino);
 
 	d_add(dentry, inode);
 	return 0;

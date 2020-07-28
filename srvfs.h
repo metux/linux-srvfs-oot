@@ -3,7 +3,6 @@
 
 #include <linux/fs.h>
 #include <asm/atomic.h>
-#include <asm/uaccess.h>
 
 #define SRVFS_MAGIC 0x19980123
 
