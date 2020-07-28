@@ -60,7 +60,7 @@ static ssize_t srvfs_file_read(struct file *filp, char *buf,
 	return count;
 }
 
-static void do_switch(struct file *filp, long fd)
+static int do_switch(struct file *filp, long fd)
 {
 	struct srvfs_inode *priv = filp->private_data;
 	pr_info("doing the switch: fd=%ld\n", fd);
@@ -76,10 +76,17 @@ static void do_switch(struct file *filp, long fd)
 	priv->file = fget(fd);
 	if (!priv->file) {
 		pr_err("not an valid fd\n");
-		return;
+		return -EINVAL;
+	}
+
+	if (priv->file->f_inode == filp->f_inode) {
+		pr_err("whoops. trying to link inode with itself!\n");
+		fput(priv->file);
+		return -ELOOP;
 	}
 
 	pr_info("got valid fd. storing it\n");
+	return 0;
 }
 
 static ssize_t srvfs_file_write(struct file *filp, const char *buf,
@@ -88,6 +95,7 @@ static ssize_t srvfs_file_write(struct file *filp, const char *buf,
 	char tmp[TMPSIZE];
 	long fd;
 	struct srvfs_inode *priv = filp->private_data;
+	int ret;
 
 	if (*offset != 0)
 		return -EINVAL;
@@ -100,9 +108,13 @@ static ssize_t srvfs_file_write(struct file *filp, const char *buf,
 
 	fd = simple_strtol(tmp, NULL, 10);
 	pr_info("requested to assign fd %ld\n", fd);
-	do_switch(filp, fd);
+	ret = do_switch(filp, fd);
 
 	atomic_set(&priv->counter, simple_strtol(tmp, NULL, 10));
+
+	if (ret)
+		return ret;
+
 	return count;
 }
 

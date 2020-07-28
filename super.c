@@ -34,7 +34,7 @@ static void srvfs_sb_evict_inode(struct inode *inode)
 		}
 		kfree(inode->i_private);
 	} else {
-		pr_info("evict: no private data to free\n");
+		pr_info("evict: no private data to free: %ld\n", inode->i_ino);
 	}
 }
 
