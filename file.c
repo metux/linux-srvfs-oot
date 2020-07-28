@@ -200,6 +200,7 @@ static int srvfs_file_open(struct inode *inode, struct file *filp)
 
 	if (priv->file) {
 		pr_info("open inode: already assigned another file\n");
+		filep->f_ops = proxy_ops;
 	}
 	else {
 		pr_info("open inode: no file assigned yet\n");
