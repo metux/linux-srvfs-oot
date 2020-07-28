@@ -76,15 +76,16 @@ int proxy_flush (struct file * file, fl_owner_t id)
 	return -ENOTSUPP;
 }
 
-// FIXME: bookkeeping !
+/* NOTE: we're NOT passing this down to the target, this would break
+   heavily as the file descriptor is still in use
+
+   We probably should do some book keeping in order to prevent the
+   proxy file from begin removed while its still open. or at least
+   the target file and associated private data
+*/
 int proxy_release (struct inode * inode, struct file * file)
 {
-	struct srvfs_inode *priv = file->private_data;
-	struct file *target = priv->file;
-	pr_info("%s()\n", __FUNCTION__);
-	if (target->f_op->release)
-		return target->f_op->release(inode, target);
-	pr_info("%s() operation not supported\n", __FUNCTION__);
+	pr_info("%s() dummy\n", __FUNCTION__);
 	return -ENOTSUPP;
 }
 
