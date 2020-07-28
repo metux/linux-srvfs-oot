@@ -45,15 +45,12 @@ static int srvfs_dir_create (struct inode *inode, struct dentry *dentry, umode_t
 	return srvfs_insert_file(inode->i_sb, dentry);
 }
 
-const struct inode_operations simple_dir_inode_operations = {
+const struct inode_operations srvfs_rootdir_operations = {
 	.lookup		= simple_lookup,
 	.unlink		= srvfs_dir_unlink,
 	.create		= srvfs_dir_create,
 };
 
-/*
- * Stuff to pass in when registering the filesystem.
- */
 struct dentry *srvfs_mount(struct file_system_type *fs_type,
 			   int flags, const char *dev_name, void *data)
 {

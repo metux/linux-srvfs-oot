@@ -18,6 +18,7 @@ struct srvfs_sb {
 };
 
 extern struct file_operations srvfs_file_ops;
+extern const struct inode_operations srvfs_rootdir_operations;
 
 int srvfs_fill_super (struct super_block *sb, void *data, int silent);
 int srvfs_inode_id (struct super_block *sb);
