@@ -88,7 +88,7 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	inode->i_ino = srvfs_inode_id(sb);
 	inode->i_mode = S_IFDIR | 0755;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	inode->i_op = &simple_dir_inode_operations;
+	inode->i_op = &srvfs_rootdir_inode_operations;
 	inode->i_fop = &simple_dir_operations;
 	set_nlink(inode, 2);
 	root = d_make_root(inode);
