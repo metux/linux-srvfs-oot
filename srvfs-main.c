@@ -51,7 +51,15 @@ err:
 
 static int srvfs_dir_unlink(struct inode *inode, struct dentry *dentry)
 {
+	struct srvfs_inode *priv = inode->i_private;
 	pr_info("srvfs: unlink:\n");
+
+	if (priv->dentry == dentry) {
+		pr_info("srvfs: unlink: dentries match\n");
+	}
+	else{
+		pr_info("srvfs: dentries dont match\n");
+	}
 	return -EPERM;
 }
 
