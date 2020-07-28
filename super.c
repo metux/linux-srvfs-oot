@@ -101,6 +101,7 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 		pr_info("fill_super(): could not create root\n");
 		goto err_root;
 	}
+	sb->s_root = root;
 
 	for (i = 0; i<ARRAY_SIZE(names); i++) {
 		ret = srvfs_create_file(sb, root, names[i]);
@@ -109,7 +110,6 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 			goto out;
 		}
 	}
-	sb->s_root = root;
 	return 0;
 out:
 	d_genocide(root);

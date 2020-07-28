@@ -122,6 +122,8 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	priv->mode = 0;
 	priv->dentry = dentry;
 
+//	if (sb->s_root == NULL) {
+//		
 	inode_init_owner(inode, sb->s_root->d_inode, mode);
 
 	// FIXME: still needed ?
@@ -140,6 +142,9 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 //	d_add(dentry, inode);
 	d_instantiate(dentry, inode);
 	return 0;
+
+err_inode:
+	iput(inode);
 
 err:
 	kfree(priv);
