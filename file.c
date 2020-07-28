@@ -192,15 +192,15 @@ struct file_operations proxy_ops = {
 //	.dedupe_file_range = proxy_dedupe_file_range,
 };
 
-static int srvfs_file_open(struct inode *inode, struct file *filp)
+static int srvfs_file_open(struct inode *inode, struct file *file)
 {
 	struct srvfs_inode *priv = inode->i_private;
 	pr_info("open inode_id=%ld\n", inode->i_ino);
-	filp->private_data = inode->i_private;
+	file->private_data = inode->i_private;
 
 	if (priv->file) {
 		pr_info("open inode: already assigned another file\n");
-		filep->f_ops = proxy_ops;
+		file->f_op = &proxy_ops;
 	}
 	else {
 		pr_info("open inode: no file assigned yet\n");
