@@ -63,10 +63,13 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	struct dentry *root;
 	int i;
 	struct srvfs_sb* sbpriv;
+	int ret = 0;
 
 	sbpriv = kmalloc(sizeof(struct srvfs_sb), GFP_KERNEL);
-	if (sbpriv == NULL)
+	if (sbpriv == NULL) {
+		pr_err("cant alloc srvfs_sb private\n");
 		goto err_sbpriv;
+	}
 
 	atomic_set(&sbpriv->inode_counter, 1);
 
@@ -78,8 +81,10 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	sb->s_fs_info = sbpriv;
 
 	inode = new_inode(sb);
-	if (!inode)
+	if (!inode) {
+		pr_err("cant allocate root inode\n");
 		goto err_inode;
+	}
 
 	/*
 	 * because the root inode is 1, the files array must not contain an
@@ -98,8 +103,11 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	}
 
 	for (i = 0; i<ARRAY_SIZE(names); i++) {
-		if (!srvfs_create_file(sb, root, names[i]))
+		ret = srvfs_create_file(sb, root, names[i]);
+		if (ret) {
+			pr_err("srvfs_create_file() returned: %d\n", ret);
 			goto out;
+		}
 	}
 	sb->s_root = root;
 	return 0;
