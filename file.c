@@ -11,10 +11,200 @@
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
 
+
+loff_t proxy_llseek (struct file *file, loff_t off, int mode)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->llseek)
+		return target->f_op->llseek(target, off, mode);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+ssize_t proxy_read (struct file *file, char __user *buf , size_t len, loff_t * off)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->read)
+		return target->f_op->read(target, buf, len, off);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+ssize_t proxy_write (struct file *file, const char __user * buf, size_t len, loff_t * off)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->write)
+		return target->f_op->write(target, buf, len, off);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+//        ssize_t (*read_iter) (struct kiocb *, struct iov_iter *);
+//        ssize_t (*write_iter) (struct kiocb *, struct iov_iter *);
+//        int (*iterate) (struct file *, struct dir_context *);
+//        int (*iterate_shared) (struct file *, struct dir_context *);
+//        unsigned int (*poll) (struct file *, struct poll_table_struct *);
+//        long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long);
+//        long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
+//        int (*mmap) (struct file *, struct vm_area_struct *);
+
+int proxy_open (struct inode *inode, struct file *file)
+{
+//	struct srvfs_inode *priv = file->private_data;
+//	struct file *target = priv->file;
+	pr_info("%s() not implemented yet\n", __FUNCTION__);
+//	if (target->f_op->write)
+//		return target->f_op>read(target, buf, len, off);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+int proxy_flush (struct file * file, fl_owner_t id)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->flush)
+		return target->f_op->flush(target, id);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+// FIXME: bookkeeping !
+int proxy_release (struct inode * inode, struct file * file)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->release)
+		return target->f_op->release(inode, target);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+int proxy_fsync (struct file *file, loff_t off1, loff_t off2, int datasync)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->fsync)
+		return target->f_op->fsync(target, off1, off2, datasync);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+int proxy_fasync (int x, struct file *file , int y)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->fasync)
+		return target->f_op->fasync(x, target, y);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+int proxy_lock (struct file * file, int flags, struct file_lock *lock)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->lock)
+		return target->f_op->lock(target, flags, lock);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+int proxy_flock (struct file *file , int flags, struct file_lock *lock)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	pr_info("%s()\n", __FUNCTION__);
+	if (target->f_op->flock)
+		return target->f_op->flock(target, flags, lock);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+	return -ENOTSUPP;
+}
+
+//        ssize_t (*sendpage) (struct file *, struct page *, int, size_t, loff_t *, int);
+//        unsigned long (*get_unmapped_area)(struct file *, unsigned long, unsigned long, unsigned long, unsigned long);
+//        int (*check_flags)(int);
+//        ssize_t (*splice_write)(struct pipe_inode_info *, struct file *, loff_t *, size_t, unsigned int);
+//        ssize_t (*splice_read)(struct file *, loff_t *, struct pipe_inode_info *, size_t, unsigned int);
+//        int (*setlease)(struct file *, long, struct file_lock **, void **);
+//        long (*fallocate)(struct file *file, int mode, loff_t offset,
+//                          loff_t len);
+
+void proxy_show_fdinfo(struct seq_file *m, struct file *file)
+{
+	struct srvfs_inode *priv = file->private_data;
+	struct file *target = priv->file;
+	if (target->f_op->show_fdinfo)
+		return target->f_op->show_fdinfo(m, target);
+	pr_info("%s() operation not supported\n", __FUNCTION__);
+}
+
+//#ifndef CONFIG_MMU
+//        unsigned (*mmap_capabilities)(struct file *);
+//#endif
+//        ssize_t (*copy_file_range)(struct file *, loff_t, struct file *,
+//                        loff_t, size_t, unsigned int);
+//        int (*clone_file_range)(struct file *, loff_t, struct file *, loff_t,
+//                        u64);
+//        ssize_t (*dedupe_file_range)(struct file *, u64, u64, struct file *,
+//                        u64);
+
+struct file_operations proxy_ops = {
+	.owner = THIS_MODULE,
+	.llseek = proxy_llseek,
+	.read = proxy_read,
+	.write = proxy_write,
+//	.read_iter = proxy_read_iter,
+//	.write_iter = proxy_write_iter,
+//	.iterate = proxy_iterate,
+//	.iterate_shared = proxy_iterate_shared,
+//	.poll = proxy_poll,
+//	.unlocked_ioctl = proxy_unlocked_ioctl,
+//	.compat_ioctl = proxy_compat_ioctl,
+//	.mmap = proxy_mmap,
+	.flush = proxy_flush,
+	.release = proxy_release,
+	.fsync = proxy_fsync,
+	.lock = proxy_lock,
+//	.sendpage = proxy_sendpage,
+//	.get_unmapped_area = proxy_get_unmapped_area,
+//	.check_flags = proxy_check_flags,
+	.flock = proxy_flock,
+//	.splice_write = proxy_splice_write,
+//	.splice_read = proxy_splice_read,
+//	.setlease = proxy_setlease,
+//	.fallocate = proxy_fallocate,
+	.show_fdinfo = proxy_show_fdinfo,
+//	.mmap_capabilities = proxy_mmap_capabilities,
+//	.copy_file_range = proxy_copy_file_range,
+//	.clone_file_range = proxy_clone_file_range,
+//	.dedupe_file_range = proxy_dedupe_file_range,
+};
+
 static int srvfs_file_open(struct inode *inode, struct file *filp)
 {
+	struct srvfs_inode *priv = inode->i_private;
 	pr_info("open inode_id=%ld\n", inode->i_ino);
 	filp->private_data = inode->i_private;
+
+	if (priv->file) {
+		pr_info("open inode: already assigned another file\n");
+	}
+	else {
+		pr_info("open inode: no file assigned yet\n");
+	}
+
 	return 0;
 }
 
