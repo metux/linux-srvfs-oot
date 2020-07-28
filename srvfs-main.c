@@ -34,9 +34,21 @@ static int srvfs_dir_unlink(struct inode *inode, struct dentry *dentry)
 	return 0;
 }
 
+static int srvfs_dir_create (struct inode *inode, struct dentry *dentry, umode_t mode, bool excl)
+{
+	pr_info("srvfs_dir_create(): trying to create dir entry\n");
+	if (excl)
+		pr_info("srvfs_dir_create() exclusive\n");
+	else
+		pr_info("srvfs_dir_create() not exclusive\n");
+
+	return 0;
+}
+
 const struct inode_operations simple_dir_inode_operations = {
 	.lookup		= simple_lookup,
 	.unlink		= srvfs_dir_unlink,
+	.create		= srvfs_dir_create,
 };
 
 /*
@@ -58,6 +70,7 @@ static struct file_system_type srvfs_type = {
 static int __init srvfs_init(void)
 {
 	pr_info("srvfs: loaded\n");
+	atomic_set(&inode_counter, 1);
 	return register_filesystem(&srvfs_type);
 }
 

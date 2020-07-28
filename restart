@@ -1,0 +1,11 @@
+#!/bin/bash
+
+mkdir -p /xs
+
+umount /xs
+rmmod srvfs
+
+insmod srvfs.ko
+mount none /xs -t srvfs
+
+ls -la /xs
