@@ -70,7 +70,7 @@ static int srvfs_dir_unlink(struct inode *inode, struct dentry *dentry)
 
 	pr_info("srvfs unlink: sucessfully unlinked\n");
 
-	return -EPERM;
+	return 0;
 }
 
 const struct inode_operations simple_dir_inode_operations = {
@@ -96,12 +96,14 @@ static struct file_system_type srvfs_type = {
 
 static int __init srvfs_init(void)
 {
+	pr_info("srvfs: loaded\n");
 	return register_filesystem(&srvfs_type);
 }
 
 static void __exit srvfs_exit(void)
 {
 	unregister_filesystem(&srvfs_type);
+	pr_info("srvfs: unloaded\n");
 }
 
 module_init(srvfs_init);
