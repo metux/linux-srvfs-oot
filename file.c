@@ -100,7 +100,7 @@ struct file_operations srvfs_file_ops = {
 	.release	= srvfs_file_release,
 };
 
-int srvfs_insert_file (struct inode *dir, struct dentry *dentry)
+int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 {
 	struct inode *inode;
 	struct srvfs_inode *priv;
@@ -111,7 +111,7 @@ int srvfs_insert_file (struct inode *dir, struct dentry *dentry)
 		return -ENOMEM;
 	}
 
-	inode = new_inode(dir->i_sb);
+	inode = new_inode(sb);
 	if (!inode)
 		goto err;
 
@@ -131,43 +131,4 @@ int srvfs_insert_file (struct inode *dir, struct dentry *dentry)
 err:
 	kfree(priv);
 	return -ENOMEM;
-}
-
-int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* name)
-{
-	struct dentry *dentry;
-	struct inode *inode;
-	struct srvfs_inode *priv;
-
-	dentry = d_alloc_name(root, name);
-	if (!dentry)
-		goto err;
-
-	inode = new_inode(sb);
-	if (!inode) {
-		dput(dentry);
-		goto err;
-	}
-
-	priv = kmalloc(sizeof(struct srvfs_inode), GFP_KERNEL);
-	if (!priv) {
-		pr_err("srvfs_create_file(): failed to malloc inode priv\n");
-		goto err;
-	}
-
-	atomic_set(&priv->counter, 0);
-	priv->mode = 0;
-	priv->dentry = dentry;
-
-	inode->i_mode = S_IFREG | S_IWUSR | S_IRUGO;
-	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	inode->i_fop = &srvfs_file_ops;
-	inode->i_ino = srvfs_inode_id(sb);
-	inode->i_private = priv;
-
-	d_add(dentry, inode);
-	return 1;
-// FIXME: release resources
-err:
-	return 0;
 }

@@ -46,6 +46,17 @@ int srvfs_inode_id (struct super_block *sb)
 	return atomic_inc_return(&priv->inode_counter);
 }
 
+static int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* name)
+{
+	struct dentry *dentry;
+
+	dentry = d_alloc_name(root, name);
+	if (!dentry)
+		return -ENOMEM;
+
+	return srvfs_insert_file(sb, dentry);
+}
+
 int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 {
 	struct inode *inode;

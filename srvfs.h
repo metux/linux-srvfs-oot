@@ -20,7 +20,7 @@ struct srvfs_sb {
 extern struct file_operations srvfs_file_ops;
 
 int srvfs_fill_super (struct super_block *sb, void *data, int silent);
-int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* name);
 int srvfs_inode_id (struct super_block *sb);
+int srvfs_insert_file (struct super_block *sb, struct dentry *dentry);
 
 #endif /* __LINUX_FS_SRVFS_H */
