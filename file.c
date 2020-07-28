@@ -107,7 +107,7 @@ int srvfs_insert_file (struct inode *dir, struct dentry *dentry)
 
 	priv = kmalloc(sizeof(struct srvfs_inode), GFP_KERNEL);
 	if (!priv) {
-		pr_err("srvfs_create_file(): failed to malloc inode priv\n");
+		pr_err("srvfs_insert_file(): failed to malloc inode priv\n");
 		return -ENOMEM;
 	}
 
@@ -133,7 +133,7 @@ err:
 	return -ENOMEM;
 }
 
-int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* name, int idx)
+int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* name)
 {
 	struct dentry *dentry;
 	struct inode *inode;
@@ -162,7 +162,7 @@ int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* 
 	inode->i_mode = S_IFREG | S_IWUSR | S_IRUGO;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_fop = &srvfs_file_ops;
-	inode->i_ino = idx;
+	inode->i_ino = srvfs_inode_id(sb);
 	inode->i_private = priv;
 
 	d_add(dentry, inode);

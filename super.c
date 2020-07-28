@@ -10,8 +10,6 @@
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
 
-atomic_t inode_counter;
-
 static const char *names[] = {
 	"counter0",
 	"counter1",
@@ -44,7 +42,8 @@ static const struct super_operations srvfs_super_operations = {
 
 int srvfs_inode_id (struct super_block *sb)
 {
-	return atomic_inc_return(&inode_counter);
+	struct srvfs_sb *priv = sb->s_fs_info;
+	return atomic_inc_return(&priv->inode_counter);
 }
 
 int srvfs_fill_super (struct super_block *sb, void *data, int silent)
@@ -57,6 +56,8 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	sbpriv = kmalloc(sizeof(struct srvfs_sb), GFP_KERNEL);
 	if (sbpriv == NULL)
 		goto err_sbpriv;
+
+	atomic_set(&sbpriv->inode_counter, 1);
 
 	sb->s_blocksize = PAGE_SIZE;
 	sb->s_blocksize_bits = PAGE_SHIFT;
@@ -73,7 +74,7 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	 * because the root inode is 1, the files array must not contain an
 	 * entry at index 1
 	 */
-	inode->i_ino = 1;
+	inode->i_ino = srvfs_inode_id(sb);
 	inode->i_mode = S_IFDIR | 0755;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_op = &simple_dir_inode_operations;
@@ -86,7 +87,7 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	}
 
 	for (i = 0; i<ARRAY_SIZE(names); i++) {
-		if (!srvfs_create_file(sb, root, names[i], i+1))
+		if (!srvfs_create_file(sb, root, names[i]))
 			goto out;
 	}
 	sb->s_root = root;

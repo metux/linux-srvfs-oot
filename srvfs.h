@@ -18,10 +18,9 @@ struct srvfs_sb {
 };
 
 extern struct file_operations srvfs_file_ops;
-extern atomic_t inode_counter;
 
 int srvfs_fill_super (struct super_block *sb, void *data, int silent);
-int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* name, int idx);
+int srvfs_create_file (struct super_block *sb, struct dentry *root, const char* name);
 int srvfs_inode_id (struct super_block *sb);
 
 #endif /* __LINUX_FS_SRVFS_H */

@@ -70,7 +70,6 @@ static struct file_system_type srvfs_type = {
 static int __init srvfs_init(void)
 {
 	pr_info("srvfs: loaded\n");
-	atomic_set(&inode_counter, 1);
 	return register_filesystem(&srvfs_type);
 }
 
