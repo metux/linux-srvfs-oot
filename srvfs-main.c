@@ -51,15 +51,25 @@ err:
 
 static int srvfs_dir_unlink(struct inode *inode, struct dentry *dentry)
 {
-	struct srvfs_inode *priv = inode->i_private;
-	pr_info("srvfs: unlink:\n");
+	struct srvfs_inode *priv = dentry->d_inode->i_private;
+	pr_info("srvfs: unlink\n");
 
-	if (priv->dentry == dentry) {
-		pr_info("srvfs: unlink: dentries match\n");
+	if (priv == NULL) {
+		pr_err("srvfs unlink: dentry's inode has no priv\n");
+		return -EFAULT;
 	}
-	else{
-		pr_info("srvfs: dentries dont match\n");
+
+	if (priv->dentry != dentry) {
+		pr_err("srvfs unlink: dentry's dont match\n");
+		return -EFAULT;
 	}
+
+	priv->dentry = NULL;
+	d_delete(dentry);
+	dput(dentry);
+
+	pr_info("srvfs unlink: sucessfully unlinked\n");
+
 	return -EPERM;
 }
 
