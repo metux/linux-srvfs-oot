@@ -12,14 +12,14 @@
 
 static int srvfs_file_open(struct inode *inode, struct file *filp)
 {
-	pr_info("open\n");
+	pr_info("open inode_id=%ld\n", inode->i_ino);
 	filp->private_data = inode->i_private;
 	return 0;
 }
 
 static int srvfs_file_release(struct inode *inode, struct file *filp)
 {
-	pr_info("closing\n");
+	pr_info("closing inode_id=%ld\n", inode->i_ino);
 	return 0;
 }
 
@@ -122,8 +122,6 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	priv->mode = 0;
 	priv->dentry = dentry;
 
-//	if (sb->s_root == NULL) {
-//		
 	inode_init_owner(inode, sb->s_root->d_inode, mode);
 
 	// FIXME: still needed ?
@@ -133,8 +131,8 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	inode->i_ino = srvfs_inode_id(inode->i_sb);
 	inode->i_private = priv;
 
-//	insert_inode_hash(inode);
-//	mark_inode_dirty(inode);
+	insert_inode_hash(inode);
+	mark_inode_dirty(inode);
 
 	pr_info("new inode id: %ld\n", inode->i_ino);
 
