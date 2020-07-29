@@ -1,10 +1,13 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/slab.h>
+#include <linux/file.h>
+
 #include "srvfs.h"
 
 // FIXME: should we refcnt the dentry ?
 
-struct srvfs_fileref *srvfs_fileref_new(struct *dentry)
+struct srvfs_fileref *srvfs_fileref_new(struct dentry *dentry)
 {
 	struct srvfs_fileref *fileref;
 
@@ -14,18 +17,19 @@ struct srvfs_fileref *srvfs_fileref_new(struct *dentry)
 		return NULL;
 	}
 
-	atomic_set(fileref->refcnt, 1);
+	atomic_set(&fileref->refcnt, 1);
 	return fileref;
 }
 
-struct srvfs_fileref *srvfs_fileref_get(struct *srvfs_fileref)
+struct srvfs_fileref *srvfs_fileref_get(struct srvfs_fileref *fileref)
 {
-	atomic_inc(fileref->refcnt);
+	atomic_inc(&fileref->refcnt);
+	return fileref;
 }
 
-void srvfs_fileref_put(struct *srvfs_fileref *fileref)
+void srvfs_fileref_put(struct srvfs_fileref *fileref)
 {
-	int cnt = atomic_dec_ref(fileref->refcnt);
+	int cnt = atomic_dec_return(&fileref->refcnt);
 
 	if (cnt < 0) {
 		pr_err("fileref counter below 0: %d\n", cnt);

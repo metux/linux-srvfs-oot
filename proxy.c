@@ -87,7 +87,7 @@ static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
 
 static int proxy_open (struct inode *inode, struct file *proxy)
 {
-	PROXY_NOTSUP_INTRO
+	PROXY_INTRO
 	pr_info("%s() not implemented yet\n", __FUNCTION__);
 	PROXY_NOTSUP_RET
 }

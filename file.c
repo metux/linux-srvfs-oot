@@ -30,7 +30,7 @@ static int srvfs_file_open(struct inode *inode, struct file *file)
 
 static int srvfs_file_release(struct inode *inode, struct file *file)
 {
-	struct srvfs_fileref *fileref = file->private;
+	struct srvfs_fileref *fileref = file->private_data;
 	pr_info("closing inode_id=%ld\n", inode->i_ino);
 	srvfs_fileref_put(fileref);
 	return 0;
@@ -53,11 +53,11 @@ static ssize_t srvfs_file_read(struct file *file, char *buf,
 	/*
 	 * Encode the value, and figure out how much of it we can pass back.
 	 */
-	v = atomic_read(&priv->counter);
+	v = atomic_read(&fileref->counter);
 	if (*offset > 0)
 		v -= 1;  /* the value returned when offset was zero */
 	else
-		atomic_inc(&priv->counter);
+		atomic_inc(&fileref->counter);
 	len = snprintf(tmp, sizeof(tmp), "%d\n", v);
 	if (*offset > len)
 		return 0;
@@ -74,18 +74,26 @@ static ssize_t srvfs_file_read(struct file *file, char *buf,
 
 static int do_switch(struct file *file, long fd)
 {
-	struct srvfs_fileref *fileref= filp->private_data;
+	struct srvfs_fileref *fileref= file->private_data;
 	struct file *newfile = fget(fd);
 	pr_info("doing the switch: fd=%ld\n", fd);
 
-	if (newfile->file->f_inode == file->f_inode) {
+	if (newfile->f_inode == file->f_inode) {
 		pr_err("whoops. trying to link inode with itself!\n");
-		fput(newfile);
-		return -ELOOP;
+		goto loop;
+	}
+
+	if (newfile->f_inode->i_sb == file->f_inode->i_sb) {
+		pr_err("whoops. trying to link inode within same fs!\n");
+		goto loop;
 	}
 
 	srvfs_fileref_set(fileref, newfile);
 	return 0;
+
+loop:
+	fput(newfile);
+	return -ELOOP;
 }
 
 static ssize_t srvfs_file_write(struct file *file, const char *buf,
@@ -107,9 +115,9 @@ static ssize_t srvfs_file_write(struct file *file, const char *buf,
 
 	fd = simple_strtol(tmp, NULL, 10);
 	pr_info("requested to assign fd %ld\n", fd);
-	ret = do_switch(filp, fd);
+	ret = do_switch(file, fd);
 
-	atomic_set(&priv->counter, simple_strtol(tmp, NULL, 10));
+	atomic_set(&fileref->counter, simple_strtol(tmp, NULL, 10));
 
 	if (ret)
 		return ret;
@@ -143,14 +151,14 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 		goto err;
 	}
 
-	atomic_set(&priv->counter, 0);
+	atomic_set(&fileref->counter, 0);
 
 	inode_init_owner(inode, sb->s_root->d_inode, mode);
 
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_fop = &srvfs_file_ops;
 	inode->i_ino = srvfs_inode_id(inode->i_sb);
-	inode->i_private = priv;
+	inode->i_private = fileref;
 
 	pr_info("new inode id: %ld\n", inode->i_ino);
 
@@ -159,6 +167,6 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	return 0;
 
 err:
-	kfree(priv);
+	srvfs_fileref_put(fileref);
 	return -ENOMEM;
 }

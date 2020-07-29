@@ -15,13 +15,13 @@ static int srvfs_dir_unlink(struct inode *inode, struct dentry *dentry)
 		return -EFAULT;
 	}
 
-	if (fileref->dentry != dentry) {
-		pr_err("srvfs unlink: dentry's dont match\n");
-		return -EFAULT;
-	}
+//	if (fileref->dentry != dentry) {
+//		pr_err("srvfs unlink: dentry's dont match\n");
+//		return -EFAULT;
+//	}
 
 	// FIXME: unref the dentry ?
-	fileref->dentry = NULL;
+//	fileref->dentry = NULL;
 	d_delete(dentry);
 	dput(dentry);
 
