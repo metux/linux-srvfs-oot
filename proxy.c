@@ -15,6 +15,7 @@
 #define PROXY_INTRO \
 	struct srvfs_fileref *fileref = proxy->private_data; \
 	struct file *target = fileref->file; \
+	(void)(target); \
 	pr_info("%s()\n", __FUNCTION__);
 
 #define PROXY_NOTSUP \
@@ -110,6 +111,7 @@ int proxy_flush (struct file *proxy, fl_owner_t id)
 static int proxy_release (struct inode *inode, struct file *proxy)
 {
 	PROXY_INTRO
+	(void)(inode);
 	srvfs_fileref_put(fileref);
 	return 0;
 }
@@ -247,9 +249,10 @@ static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 pos1, u64 pos2, s
 	PROXY_NOTSUP_RET
 }
 
-struct file_operations proxy_ops = {
+const struct file_operations proxy_file_ops = {
 	.owner = THIS_MODULE,
 	.llseek = proxy_llseek,
+	.open = proxy_open,
 	.read = proxy_read,
 	.write = proxy_write,
 //	.read_iter = proxy_read_iter,
