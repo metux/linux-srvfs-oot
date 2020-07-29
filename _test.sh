@@ -40,3 +40,7 @@ do_mount() {
 do_list() {
 	ls -la $TESTDIR
 }
+
+log_info() {
+	echo "INFO: $*" >&2
+}

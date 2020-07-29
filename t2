@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+
+. ./_test.sh
+
+TESTBACK=/tmp/knollo
+TESTFILE=$TESTDIR/test-localfile
+
+log_info "assigning"
+tests/test-localfile $TESTDIR $TESTBACK
+
+log_info "writing to backend"
+echo "HELLO WORLD" >> $TESTBACK
+
+log_info "catting mapped file"
+cat $TESTFILE
+
+log_info "appending to test file"
+echo "HUHUHU" >> $TESTFILE
+
+log_info "catting backend"
+cat $TESTBACK
