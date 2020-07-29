@@ -1,17 +1,22 @@
 #!/bin/bash
 
-mkdir -p /xs
+TESTIR=/xs
+MODULE=srvfs
+FSNAME=srvfs
+
+mkdir -p $TESTDIR
 
 echo "unmounting"
-umount /xs
+umount $TESTDIR
+
 echo "removing module"
-rmmod srvfs
+rmmod $MODULE
 
 echo "inserting module"
-insmod srvfs.ko
+insmod kernel/$MODULE.ko
 
 echo "mounting"
-mount none /xs -t srvfs
+mount none $TESTDIR -t $FSNAME
 
 echo "listing"
-ls -la /xs
+ls -la $TESTDIR
