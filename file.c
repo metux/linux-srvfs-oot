@@ -101,23 +101,17 @@ static ssize_t srvfs_file_write(struct file *file, const char *buf,
 {
 	char tmp[TMPSIZE];
 	long fd;
-	struct srvfs_fileref *fileref = file->private_data;
 	int ret;
 
-	if (*offset != 0)
+	if ((*offset != 0) || (count >= TMPSIZE))
 		return -EINVAL;
 
-	if (count >= TMPSIZE)
-		return -EINVAL;
 	memset(tmp, 0, TMPSIZE);
 	if (copy_from_user(tmp, buf, count))
 		return -EFAULT;
 
 	fd = simple_strtol(tmp, NULL, 10);
-	pr_info("requested to assign fd %ld\n", fd);
 	ret = do_switch(file, fd);
-
-	atomic_set(&fileref->counter, simple_strtol(tmp, NULL, 10));
 
 	if (ret)
 		return ret;
@@ -138,18 +132,13 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	struct srvfs_fileref *fileref;
 	int mode = S_IFREG | S_IWUSR | S_IRUGO;
 
-	fileref = srvfs_fileref_new(dentry);
-
-	if (!fileref) {
-		pr_err("insert_file(): failed to malloc inode priv\n");
-		return -ENOMEM;
-	}
+	fileref = srvfs_fileref_new();
+	if (!fileref)
+		goto nomem;
 
 	inode = new_inode(sb);
-	if (!inode) {
-		pr_err("insert_file(): failed to allocate inode\n");
-		goto err;
-	}
+	if (!inode)
+		goto err_inode;
 
 	atomic_set(&fileref->counter, 0);
 
@@ -166,7 +155,9 @@ int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 	d_add(dentry, inode);
 	return 0;
 
-err:
+err_inode:
 	srvfs_fileref_put(fileref);
+nomem:
+	pr_err("failed to allocate memory\n");
 	return -ENOMEM;
 }

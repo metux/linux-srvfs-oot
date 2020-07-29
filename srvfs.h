@@ -22,7 +22,7 @@ extern struct file_operations srvfs_file_ops;
 extern const struct inode_operations srvfs_rootdir_inode_operations;
 extern const struct file_operations proxy_file_ops;
 
-struct srvfs_fileref *srvfs_fileref_new(struct dentry* dentry);
+struct srvfs_fileref *srvfs_fileref_new(void);
 struct srvfs_fileref *srvfs_fileref_get(struct srvfs_fileref* fileref);
 void srvfs_fileref_put(struct srvfs_fileref* fileref);
 void srvfs_fileref_set(struct srvfs_fileref* fileref, struct file* newfile);

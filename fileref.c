@@ -5,7 +5,7 @@
 
 #include "srvfs.h"
 
-struct srvfs_fileref *srvfs_fileref_new(struct dentry *dentry)
+struct srvfs_fileref *srvfs_fileref_new(void)
 {
 	struct srvfs_fileref *fileref;
 
