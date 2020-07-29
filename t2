@@ -4,7 +4,7 @@ set -e
 
 . ./_test.sh
 
-TESTBACK=/tmp/knollo
+TESTBACK=/knollo
 TESTFILE=$TESTDIR/test-localfile
 
 log_info "assigning"

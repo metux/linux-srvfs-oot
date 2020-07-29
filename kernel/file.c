@@ -43,13 +43,18 @@ static int srvfs_file_release(struct inode *inode, struct file *file)
  * at the beginning of the file (offset = 0); otherwise we end up counting
  * by twos.
  */
-#if 0
 static ssize_t srvfs_file_read(struct file *file, char *buf,
 	size_t count, loff_t *offset)
 {
 	int v, len;
 	char tmp[TMPSIZE];
 	struct srvfs_fileref *fileref = file->private_data;
+
+	if (fileref->file) {
+		pr_err("srvfs_file_read() routed to the wrong file\n");
+	} else {
+		pr_info("srvfs_file_read() read on vanilla control file\n");
+	}
 
 	/*
 	 * Encode the value, and figure out how much of it we can pass back.
@@ -72,13 +77,17 @@ static ssize_t srvfs_file_read(struct file *file, char *buf,
 	*offset += count;
 	return count;
 }
-#endif
 
 static int do_switch(struct file *file, long fd)
 {
 	struct srvfs_fileref *fileref= file->private_data;
 	struct file *newfile = fget(fd);
 	pr_info("doing the switch: fd=%ld\n", fd);
+
+	if (!newfile) {
+		pr_info("invalid fd passed\n");
+		goto setref;
+	}
 
 	if (newfile->f_inode == file->f_inode) {
 		pr_err("whoops. trying to link inode with itself!\n");
@@ -90,6 +99,7 @@ static int do_switch(struct file *file, long fd)
 		goto loop;
 	}
 
+setref:
 	srvfs_fileref_set(fileref, newfile);
 	return 0;
 
@@ -123,7 +133,7 @@ static ssize_t srvfs_file_write(struct file *file, const char *buf,
 
 struct file_operations srvfs_file_ops = {
 	.open		= srvfs_file_open,
-//	.read		= srvfs_file_read,
+	.read		= srvfs_file_read,
 	.write		= srvfs_file_write,
 	.release	= srvfs_file_release,
 };

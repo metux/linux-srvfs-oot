@@ -25,6 +25,8 @@ int open_ctrlfile(const char* srvfs, const char* name)
 	if (ctrl_fd == -1)
 		fail("opening control file");
 
+	fprintf(stderr, "INFO: opened control file at fd %d\n", ctrl_fd);
+
 	return ctrl_fd;
 }
 
@@ -33,6 +35,8 @@ int open_localfile(const char* fn)
 	int fd = open(fn, O_RDWR | O_CREAT);
 	if (fd == -1)
 		fail("creating local file\n");
+
+	fprintf(stderr, "INFO: opened local file at fd %d\n", fd);
 
 	return fd;
 }
