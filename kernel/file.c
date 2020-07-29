@@ -145,6 +145,7 @@ static ssize_t srvfs_file_write(struct file *file, const char *buf,
 }
 
 struct file_operations srvfs_file_ops = {
+	.owner		= THIS_MODULE,
 	.open		= srvfs_file_open,
 	.read		= srvfs_file_read,
 	.write		= srvfs_file_write,
