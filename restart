@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TESTIR=/xs
+TESTDIR=/xs
 MODULE=srvfs
 FSNAME=srvfs
 
