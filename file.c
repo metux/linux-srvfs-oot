@@ -13,11 +13,11 @@
 
 static int srvfs_file_open(struct inode *inode, struct file *file)
 {
-	struct srvfs_inode *priv = inode->i_private;
+	struct srvfs_fileref *fileref = inode->i_private;
 	pr_info("open inode_id=%ld\n", inode->i_ino);
-	file->private_data = inode->i_private;
+	file->private_data = srvfs_fileref_get(fileref);
 
-	if (priv->file) {
+	if (fileref->file) {
 		pr_info("open inode: already assigned another file\n");
 		file->f_op = &proxy_file_ops;
 	}
@@ -28,9 +28,11 @@ static int srvfs_file_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int srvfs_file_release(struct inode *inode, struct file *filp)
+static int srvfs_file_release(struct inode *inode, struct file *file)
 {
+	struct srvfs_fileref *fileref = file->private;
 	pr_info("closing inode_id=%ld\n", inode->i_ino);
+	srvfs_fileref_put(fileref);
 	return 0;
 }
 
@@ -41,12 +43,12 @@ static int srvfs_file_release(struct inode *inode, struct file *filp)
  * at the beginning of the file (offset = 0); otherwise we end up counting
  * by twos.
  */
-static ssize_t srvfs_file_read(struct file *filp, char *buf,
+static ssize_t srvfs_file_read(struct file *file, char *buf,
 	size_t count, loff_t *offset)
 {
 	int v, len;
 	char tmp[TMPSIZE];
-	struct srvfs_inode *priv = filp->private_data;
+	struct srvfs_fileref *fileref = file->private_data;
 
 	/*
 	 * Encode the value, and figure out how much of it we can pass back.
@@ -70,41 +72,28 @@ static ssize_t srvfs_file_read(struct file *filp, char *buf,
 	return count;
 }
 
-static int do_switch(struct file *filp, long fd)
+static int do_switch(struct file *file, long fd)
 {
-	struct srvfs_inode *priv = filp->private_data;
+	struct srvfs_fileref *fileref= filp->private_data;
+	struct file *newfile = fget(fd);
 	pr_info("doing the switch: fd=%ld\n", fd);
-//	d_delete(priv->dentry);
-//	dput(priv->dentry);
-//	priv->dentry = NULL;
 
-	if (priv->file) {
-		pr_info("freeing existing file\n");
-		fput(priv->file);
-	}
-
-	priv->file = fget(fd);
-	if (!priv->file) {
-		pr_err("not an valid fd\n");
-		return -EINVAL;
-	}
-
-	if (priv->file->f_inode == filp->f_inode) {
+	if (newfile->file->f_inode == file->f_inode) {
 		pr_err("whoops. trying to link inode with itself!\n");
-		fput(priv->file);
+		fput(newfile);
 		return -ELOOP;
 	}
 
-	pr_info("got valid fd. storing it\n");
+	srvfs_fileref_set(fileref, newfile);
 	return 0;
 }
 
-static ssize_t srvfs_file_write(struct file *filp, const char *buf,
+static ssize_t srvfs_file_write(struct file *file, const char *buf,
 				size_t count, loff_t *offset)
 {
 	char tmp[TMPSIZE];
 	long fd;
-	struct srvfs_inode *priv = filp->private_data;
+	struct srvfs_fileref *fileref = file->private_data;
 	int ret;
 
 	if (*offset != 0)
@@ -138,29 +127,26 @@ struct file_operations srvfs_file_ops = {
 int srvfs_insert_file (struct super_block *sb, struct dentry *dentry)
 {
 	struct inode *inode;
-	struct srvfs_inode *priv;
+	struct srvfs_fileref *fileref;
 	int mode = S_IFREG | S_IWUSR | S_IRUGO;
 
-	priv = kzalloc(sizeof(struct srvfs_inode), GFP_KERNEL);
-	if (!priv) {
-		pr_err("srvfs_insert_file(): failed to malloc inode priv\n");
+	fileref = srvfs_fileref_new(dentry);
+
+	if (!fileref) {
+		pr_err("insert_file(): failed to malloc inode priv\n");
 		return -ENOMEM;
 	}
 
 	inode = new_inode(sb);
 	if (!inode) {
-		pr_err("srvfs_insert_file(): failed to allocate inode\n");
+		pr_err("insert_file(): failed to allocate inode\n");
 		goto err;
 	}
 
 	atomic_set(&priv->counter, 0);
-	priv->mode = 0;
-	priv->dentry = dentry;
 
 	inode_init_owner(inode, sb->s_root->d_inode, mode);
 
-	// FIXME: still needed ?
-	inode->i_mode = mode;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_fop = &srvfs_file_ops;
 	inode->i_ino = srvfs_inode_id(inode->i_sb);

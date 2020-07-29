@@ -20,22 +20,24 @@ static const char *names[] = {
 
 static void srvfs_sb_evict_inode(struct inode *inode)
 {
-	struct srvfs_inode *priv = inode->i_private;
+	struct srvfs_fileref *fileref = inode->i_private;
 
 	pr_info("srvfs_evict_inode(): %ld\n", inode->i_ino);
 	clear_inode(inode);
-	if (priv) {
-		pr_info("evict: freeing private data\n");
-		if (priv->file) {
-			pr_info("evict: freeing assigned file\n");
-			fput(priv->file);
-		} else {
-			pr_info("evict: no file stored\n");
-		}
-		kfree(inode->i_private);
-	} else {
-		pr_info("evict: no private data to free: %ld\n", inode->i_ino);
-	}
+	srvfs_fileref_put(priv);
+
+//	if (priv) {
+//		pr_info("evict: freeing private data\n");
+//		if (priv->file) {
+//			pr_info("evict: freeing assigned file\n");
+//			fput(priv->file);
+//		} else {
+//			pr_info("evict: no file stored\n");
+//		}
+//		kfree(inode->i_private);
+//	} else {
+//		pr_info("evict: no private data to free: %ld\n", inode->i_ino);
+//	}
 }
 
 static void srvfs_sb_put_super(struct super_block *sb)
