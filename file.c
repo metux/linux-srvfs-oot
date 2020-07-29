@@ -12,7 +12,7 @@
 #include <asm/uaccess.h>
 
 
-loff_t proxy_llseek (struct file *file, loff_t off, int mode)
+static loff_t proxy_llseek (struct file *file, loff_t off, int mode)
 {
 	struct srvfs_inode *priv = file->private_data;
 	struct file *target = priv->file;
@@ -23,7 +23,7 @@ loff_t proxy_llseek (struct file *file, loff_t off, int mode)
 	return -ENOTSUPP;
 }
 
-ssize_t proxy_read (struct file *file, char __user *buf , size_t len, loff_t * off)
+static ssize_t proxy_read (struct file *file, char __user *buf , size_t len, loff_t * off)
 {
 	struct srvfs_inode *priv = file->private_data;
 	struct file *target = priv->file;
@@ -34,7 +34,7 @@ ssize_t proxy_read (struct file *file, char __user *buf , size_t len, loff_t * o
 	return -ENOTSUPP;
 }
 
-ssize_t proxy_write (struct file *file, const char __user * buf, size_t len, loff_t * off)
+static ssize_t proxy_write (struct file *file, const char __user * buf, size_t len, loff_t * off)
 {
 	struct srvfs_inode *priv = file->private_data;
 	struct file *target = priv->file;
@@ -54,7 +54,7 @@ ssize_t proxy_write (struct file *file, const char __user * buf, size_t len, lof
 //        long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
 //        int (*mmap) (struct file *, struct vm_area_struct *);
 
-int proxy_open (struct inode *inode, struct file *file)
+static int proxy_open (struct inode *inode, struct file *file)
 {
 //	struct srvfs_inode *priv = file->private_data;
 //	struct file *target = priv->file;
@@ -83,13 +83,13 @@ int proxy_flush (struct file * file, fl_owner_t id)
    proxy file from begin removed while its still open. or at least
    the target file and associated private data
 */
-int proxy_release (struct inode * inode, struct file * file)
+static int proxy_release (struct inode * inode, struct file * file)
 {
 	pr_info("%s() dummy\n", __FUNCTION__);
 	return -ENOTSUPP;
 }
 
-int proxy_fsync (struct file *file, loff_t off1, loff_t off2, int datasync)
+static int proxy_fsync (struct file *file, loff_t off1, loff_t off2, int datasync)
 {
 	struct srvfs_inode *priv = file->private_data;
 	struct file *target = priv->file;
@@ -100,7 +100,7 @@ int proxy_fsync (struct file *file, loff_t off1, loff_t off2, int datasync)
 	return -ENOTSUPP;
 }
 
-int proxy_fasync (int x, struct file *file , int y)
+static int proxy_fasync (int x, struct file *file , int y)
 {
 	struct srvfs_inode *priv = file->private_data;
 	struct file *target = priv->file;
@@ -111,7 +111,7 @@ int proxy_fasync (int x, struct file *file , int y)
 	return -ENOTSUPP;
 }
 
-int proxy_lock (struct file * file, int flags, struct file_lock *lock)
+static int proxy_lock (struct file * file, int flags, struct file_lock *lock)
 {
 	struct srvfs_inode *priv = file->private_data;
 	struct file *target = priv->file;
@@ -122,7 +122,7 @@ int proxy_lock (struct file * file, int flags, struct file_lock *lock)
 	return -ENOTSUPP;
 }
 
-int proxy_flock (struct file *file , int flags, struct file_lock *lock)
+static int proxy_flock (struct file *file , int flags, struct file_lock *lock)
 {
 	struct srvfs_inode *priv = file->private_data;
 	struct file *target = priv->file;
@@ -142,7 +142,7 @@ int proxy_flock (struct file *file , int flags, struct file_lock *lock)
 //        long (*fallocate)(struct file *file, int mode, loff_t offset,
 //                          loff_t len);
 
-void proxy_show_fdinfo(struct seq_file *m, struct file *file)
+static void proxy_show_fdinfo(struct seq_file *m, struct file *file)
 {
 	struct srvfs_inode *priv = file->private_data;
 	struct file *target = priv->file;
