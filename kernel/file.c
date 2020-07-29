@@ -43,6 +43,7 @@ static int srvfs_file_release(struct inode *inode, struct file *file)
  * at the beginning of the file (offset = 0); otherwise we end up counting
  * by twos.
  */
+#if 0
 static ssize_t srvfs_file_read(struct file *file, char *buf,
 	size_t count, loff_t *offset)
 {
@@ -71,6 +72,7 @@ static ssize_t srvfs_file_read(struct file *file, char *buf,
 	*offset += count;
 	return count;
 }
+#endif
 
 static int do_switch(struct file *file, long fd)
 {
@@ -121,7 +123,7 @@ static ssize_t srvfs_file_write(struct file *file, const char *buf,
 
 struct file_operations srvfs_file_ops = {
 	.open		= srvfs_file_open,
-	.read		= srvfs_file_read,
+//	.read		= srvfs_file_read,
 	.write		= srvfs_file_write,
 	.release	= srvfs_file_release,
 };
