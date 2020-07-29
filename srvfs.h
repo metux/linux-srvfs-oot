@@ -2,6 +2,7 @@
 #define __LINUX_FS_SRVFS_H
 
 #include <linux/fs.h>
+#include <linux/kref.h>
 #include <asm/atomic.h>
 
 #define SRVFS_MAGIC 0x29980123
@@ -10,7 +11,7 @@ struct srvfs_fileref {
 	atomic_t counter;
 	int mode;
 	struct file *file;
-	atomic_t refcnt;
+	struct kref refcount;
 };
 
 struct srvfs_sb {
