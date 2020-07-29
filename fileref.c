@@ -38,6 +38,10 @@ void srvfs_fileref_destroy(struct kref *ref)
 
 void srvfs_fileref_put(struct srvfs_fileref *fileref)
 {
+	if (!fileref) {
+		pr_err("srvfs_fileref_put: no fileref !\n");
+		return;
+	}
 	kref_put(&fileref->refcount, srvfs_fileref_destroy);
 }
 

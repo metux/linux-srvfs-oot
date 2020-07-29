@@ -24,7 +24,10 @@ static void srvfs_sb_evict_inode(struct inode *inode)
 
 	pr_info("srvfs_evict_inode(): %ld\n", inode->i_ino);
 	clear_inode(inode);
-	srvfs_fileref_put(fileref);
+	if (fileref)
+		srvfs_fileref_put(fileref);
+	else
+		pr_info("evicting root/dir inode\n");
 }
 
 static void srvfs_sb_put_super(struct super_block *sb)
