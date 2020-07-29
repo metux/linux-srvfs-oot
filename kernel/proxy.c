@@ -19,7 +19,7 @@
 	pr_info("%s()\n", __FUNCTION__);
 
 #define PROXY_NOTSUP \
-	pr_info("%s() operation not supported\n", __FUNCTION__);
+	pr_info("%s() no backend file handler\n", __FUNCTION__);
 
 #define PROXY_NOTSUP_RET \
 	PROXY_NOTSUP \
@@ -250,7 +250,8 @@ static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 pos1, u64 pos2, s
 }
 
 const struct file_operations proxy_file_ops = {
-	.owner = THIS_MODULE,
+//	maybe this creates refcounting problems
+//	.owner = THIS_MODULE,
 	.llseek = proxy_llseek,
 	.open = proxy_open,
 	.read = proxy_read,

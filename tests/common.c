@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "common.h"
 
@@ -39,4 +40,16 @@ int open_localfile(const char* fn)
 	fprintf(stderr, "INFO: opened local file at fd %d\n", fd);
 
 	return fd;
+}
+
+int assign_fd(const char* srvfs, const char* ctrlname, int local_fd)
+{
+	char buffer[1024];
+	int ctrl_fd = open_ctrlfile(srvfs, ctrlname);
+
+	fprintf(stderr, "INFO assigning fd %d to %s/%s (%d)\n", local_fd, srvfs, ctrlname, ctrl_fd);
+	snprintf(buffer, sizeof(buffer), "%ld", local_fd);
+	write(ctrl_fd, buffer, strlen(buffer));
+	close(ctrl_fd);
+	return 0;
 }
