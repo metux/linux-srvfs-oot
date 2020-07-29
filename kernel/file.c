@@ -78,6 +78,14 @@ static ssize_t srvfs_file_read(struct file *file, char *buf,
 	return count;
 }
 
+#define STR(s) #s
+
+#define CHECK_OP(name)	\
+	if (!newfile->f_op->name) \
+		pr_warn("assigned file misses " STR(name) " operation"); \
+	else \
+		pr_info("assigned file has " STR(name) " operation"); \
+
 static int do_switch(struct file *file, long fd)
 {
 	struct srvfs_fileref *fileref= file->private_data;
@@ -98,6 +106,11 @@ static int do_switch(struct file *file, long fd)
 		pr_err("whoops. trying to link inode within same fs!\n");
 		goto loop;
 	}
+
+	CHECK_OP(read)
+	CHECK_OP(write)
+	CHECK_OP(flush)
+	CHECK_OP(release)
 
 setref:
 	srvfs_fileref_set(fileref, newfile);
