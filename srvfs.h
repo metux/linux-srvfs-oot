@@ -9,7 +9,6 @@
 struct srvfs_fileref {
 	atomic_t counter;
 	int mode;
-//	struct dentry *dentry;
 	struct file *file;
 	atomic_t refcnt;
 };
