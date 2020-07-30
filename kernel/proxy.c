@@ -287,7 +287,7 @@ void srvfs_proxy_fill_fops(struct file *file)
 	COPY_FILEOP(clone_file_range);
 	COPY_FILEOP(dedupe_file_range);
 	COPY_FILEOP(read_iter);
-	COPY_FILEOP(write_iter);
+//	COPY_FILEOP(write_iter);
 	COPY_FILEOP(iterate);
 	COPY_FILEOP(iterate_shared);
 #ifndef CONFIG_MMU
