@@ -84,9 +84,6 @@ static void proxy_show_fdinfo(struct seq_file *m, struct file *proxy)
 	PROXY_RET(defret); \
 }
 
-// FIXME
-static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
-	PASS_TO_FILE(flock, -EOPNOTSUPP, target, flags, fl);
 
 // FIXME
 static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 loff, u64 olen,
@@ -161,13 +158,25 @@ static unsigned long proxy_get_unmapped_area(struct file *proxy,
 						      len, pgoff, flags);
 }
 
+static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
+{
+	PROXY_INTRO
+
+	if (target->f_op->flock)
+		return target->f_op->flock(target, flags, fl);
+
+	/* I'm not completely sure, whether this fallback is really correct */
+	return locks_lock_file_wait(target, fl);
+}
 
 //FIXME
 static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
 {
 	PROXY_INTRO
+
 	if (target->f_op->mmap)
 		return target->f_op->mmap(target, vma);
+
 	PROXY_RET(-EOPNOTSUPP);
 }
 
@@ -186,16 +195,20 @@ static int proxy_check_flags(int flags)
 static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_inode_info *info, size_t size, unsigned int flags)
 {
 	PROXY_INTRO
+
 	if (target->f_op->splice_read)
 		return target->f_op->splice_read(target, off, info, size, flags);
+
 	PROXY_RET(-EOPNOTSUPP);
 }
 
 static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t len)
 {
 	PROXY_INTRO
+
 	if (target->f_op->fallocate)
 		return target->f_op->fallocate(target, mode, offset, len);
+
 	PROXY_RET(-EOPNOTSUPP);
 }
 
