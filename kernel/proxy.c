@@ -36,19 +36,23 @@
 	PROXY_RET(defret); \
 }
 
-static loff_t proxy_llseek (struct file *proxy, loff_t offset, int whence)
+static loff_t proxy_llseek(struct file *proxy, loff_t offset, int whence)
 	PASS_TO_FILE(llseek, -EOPNOTSUPP, target, offset, whence);
 
-static ssize_t proxy_read (struct file *proxy, char __user *buf, size_t len, loff_t *offset)
+static ssize_t proxy_read(struct file *proxy, char __user *buf, size_t len,
+			  loff_t *offset)
 	PASS_TO_FILE(read, -EOPNOTSUPP, target, buf, len, offset);
 
-static ssize_t proxy_write (struct file *proxy, const char __user *buf, size_t len, loff_t *offset)
+static ssize_t proxy_write(struct file *proxy, const char __user *buf,
+			   size_t len, loff_t *offset)
 	PASS_TO_FILE(write, -EOPNOTSUPP, target, buf, len, offset);
 
-static long proxy_unlocked_ioctl (struct file *proxy, unsigned int cmd, unsigned long arg)
+static long proxy_unlocked_ioctl(struct file *proxy, unsigned int cmd,
+				 unsigned long arg)
 	PASS_TO_FILE(unlocked_ioctl, -EOPNOTSUPP, target, cmd, arg);
 
-static int proxy_fsync (struct file *proxy, loff_t start, loff_t end, int datasync)
+static int proxy_fsync(struct file *proxy, loff_t start, loff_t end,
+		       int datasync)
 	PASS_TO_FILE(fsync, -EOPNOTSUPP, target, start, end, datasync);
 
 static ssize_t proxy_splice_write(struct pipe_inode_info *pipe,
@@ -62,7 +66,7 @@ static int proxy_setlease(struct file *proxy, long arg,
 
 /* this *might* cause trouble w/ NFSd, which wants to retrieve 
    the conflicting lock */
-static int proxy_lock (struct file *proxy, int cmd, struct file_lock *fl)
+static int proxy_lock(struct file *proxy, int cmd, struct file_lock *fl)
 	PASS_TO_FILE(lock, -EOPNOTSUPP, target, cmd, fl);
 
 /* === file operations passed directly to the backend file === */
@@ -72,18 +76,18 @@ static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 loff, u64 olen,
 	PASS_TO_FILE(dedupe_file_range, -EINVAL, target, loff, olen, dst_file,
 		     dst_loff);
 
-static int proxy_flush (struct file *proxy, fl_owner_t id)
+static int proxy_flush(struct file *proxy, fl_owner_t id)
 	PASS_TO_FILE(flush, 0, target, id);
 
-static long proxy_compat_ioctl (struct file *proxy, unsigned int cmd,
-				unsigned long arg)
+static long proxy_compat_ioctl(struct file *proxy, unsigned int cmd,
+			       unsigned long arg)
 	PASS_TO_FILE(compat_ioctl, -ENOIOCTLCMD, target, cmd, arg);
 
-static int proxy_fasync (int fd, struct file *proxy, int on)
+static int proxy_fasync(int fd, struct file *proxy, int on)
 	PASS_TO_FILE(fasync, 0, fd, target, on);
 
-static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int offs,
-			       size_t len, loff_t *pos, int more)
+static ssize_t proxy_sendpage(struct file *proxy, struct page *page, int offs,
+			      size_t len, loff_t *pos, int more)
 	PASS_TO_FILE(sendpage, -EINVAL, target, page, offs, len, pos, more);
 
 static unsigned int proxy_poll (struct file *proxy,
@@ -105,7 +109,7 @@ static int proxy_clone_file_range(struct file *proxy, loff_t pos_in,
 static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t len)
 	PASS_TO_FILE(fallocate, -EOPNOTSUPP, target, mode, offset, len);
 
-static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
+static int proxy_mmap(struct file *proxy, struct vm_area_struct *vma)
 	PASS_TO_FILE(mmap, -ENODEV, target, vma);
 
 #ifndef CONFIG_MMU
@@ -113,7 +117,7 @@ static unsigned proxy_mmap_capabilities(struct file *proxy)
 	PASS_TO_FILE(mmap_capabilities, -EOPNOTSUPP, target);
 #endif /* CONFIG_MMU */
 
-static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
+static int proxy_flock(struct file *proxy, int flags, struct file_lock *fl)
 	PASS_TO_FILE(flock, -EOPNOTSUPP, target, flags, fl);
 
 static unsigned long proxy_get_unmapped_area(struct file *proxy,
@@ -136,7 +140,7 @@ static void proxy_show_fdinfo(struct seq_file *m, struct file *proxy)
 	PROXY_NO_BACKEND
 }
 
-static int proxy_open (struct inode *inode, struct file *proxy)
+static int proxy_open(struct inode *inode, struct file *proxy)
 {
 	PROXY_INTRO
 	pr_info("%s() should never be called\n", __FUNCTION__);
@@ -144,7 +148,7 @@ static int proxy_open (struct inode *inode, struct file *proxy)
 	PROXY_RET(-EINVAL);
 }
 
-static int proxy_release (struct inode *inode, struct file *proxy)
+static int proxy_release(struct inode *inode, struct file *proxy)
 {
 	PROXY_INTRO
 	(void)(inode);
