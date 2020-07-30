@@ -17,19 +17,19 @@
 	(void)(target); \
 	pr_info("%s()\n", __FUNCTION__);
 
-#define PROXY_NOTSUP \
+#define PROXY_NO_BACKEND \
 	pr_info("%s() no backend file handler\n", __FUNCTION__);
 
 #define PROXY_INVAL_RET \
-	PROXY_NOTSUP \
+	PROXY_NO_BACKEND \
 	return -EINVAL;
 
 #define PROXY_NOTSUP_RET \
-	PROXY_NOTSUP \
+	PROXY_NO_BACKEND \
 	return -ENOTSUPP;
 
 #define PROXY_RET(x) \
-	PROXY_NOTSUP \
+	PROXY_NO_BACKEND \
 	return x;
 
 #define PASS_TO_VFS(vfsop, args...) \
@@ -38,7 +38,7 @@
 		return vfsop(args); \
 	}
 
-/* file operations passed to VFS */
+/* === file operations passed to VFS === */
 
 static loff_t proxy_llseek (struct file *proxy, loff_t offset, int whence)
 	PASS_TO_VFS(vfs_llseek, target, offset, whence);
@@ -69,7 +69,15 @@ static int proxy_setlease(struct file *proxy, long arg,
 static int proxy_lock (struct file *proxy, int cmd, struct file_lock *fl)
 	PASS_TO_VFS(vfs_lock_file, target, cmd, fl, NULL);
 
-/* file operations passed directly to the backend file */
+/* === file operations passed directly to the backend file === */
+
+static void proxy_show_fdinfo(struct seq_file *m, struct file *proxy)
+{
+	PROXY_INTRO
+	if (target->f_op->show_fdinfo)
+		return target->f_op->show_fdinfo(m, target);
+	PROXY_NO_BACKEND
+}
 
 // FIXME
 static int proxy_flock (struct file *proxy, int flags, struct file_lock *lock)
@@ -81,14 +89,6 @@ static int proxy_flock (struct file *proxy, int flags, struct file_lock *lock)
 }
 
 // FIXME
-static unsigned long proxy_get_unmapped_area(struct file *proxy, unsigned long a, unsigned long b, unsigned long c, unsigned long d)
-{
-	PROXY_INTRO
-	if (target->f_op->get_unmapped_area)
-		return target->f_op->get_unmapped_area(target, a, b, c, d);
-	PROXY_RET(-ENOTSUPP);
-}
-
 static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 loff, u64 olen,
 				       struct file *dst_file, u64 dst_loff)
 {
@@ -132,6 +132,15 @@ static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int x,
 	PROXY_RET(-EINVAL);
 }
 
+static unsigned int proxy_poll (struct file *proxy, struct poll_table_struct *poll)
+{
+	PROXY_INTRO
+	if (target->f_op->poll)
+		return target->f_op->poll(target, poll);
+	// FIXME: should we return -EPERM instead ?
+	PROXY_RET(0)
+}
+
 /* file operations with special implementation */
 
 static int proxy_open (struct inode *inode, struct file *proxy)
@@ -151,21 +160,24 @@ static int proxy_release (struct inode *inode, struct file *proxy)
 	return 0;
 }
 
-static unsigned int proxy_poll (struct file *proxy, struct poll_table_struct *poll)
+static unsigned long proxy_get_unmapped_area(struct file *proxy,
+					     unsigned long orig_addr,
+					     unsigned long len,
+					     unsigned long pgoff,
+					     unsigned long flags)
 {
 	PROXY_INTRO
-	if (target->f_op->poll)
-		return target->f_op->poll(target, poll);
-	// FIXME: should we return -EPERM instead ?
-	PROXY_RET(0)
+
+	/* emulate what get_unmapped_area() does when f_op->get_unmapped_area
+	   is NULL - call the current MM's get_unmapped_area() vector */
+	if (target->f_op->get_unmapped_area)
+		return target->f_op->get_unmapped_area(target, orig_addr,
+						       len, pgoff, flags);
+	else
+		return current->mm->get_unmapped_area(target, orig_addr,
+						      len, pgoff, flags);
 }
 
-// yet unimplemented .. do we need them at all ?
-
-//static ssize_t proxy_read_iter (struct kiocb *, struct iov_iter *)
-//static ssize_t proxy_write_iter (struct kiocb *, struct iov_iter *)
-//int (*iterate) (struct file *, struct dir_context *);
-//int (*iterate_shared) (struct file *, struct dir_context *);
 
 //FIXME
 static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
@@ -206,15 +218,6 @@ static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t 
 	PROXY_NOTSUP_RET
 }
 
-// FIXME
-static void proxy_show_fdinfo(struct seq_file *m, struct file *proxy)
-{
-	PROXY_INTRO
-	if (target->f_op->show_fdinfo)
-		return target->f_op->show_fdinfo(m, target);
-	PROXY_NOTSUP
-}
-
 #ifndef CONFIG_MMU
 static unsigned proxy_mmap_capabilities(struct file *proxy)
 {
@@ -244,7 +247,13 @@ static int proxy_clone_file_range(struct file *proxy, loff_t off1, struct file *
 	PROXY_NOTSUP_RET
 }
 
-// FIXME
+// yet unimplemented .. do we need them at all ?
+
+//static ssize_t proxy_read_iter (struct kiocb *, struct iov_iter *)
+//static ssize_t proxy_write_iter (struct kiocb *, struct iov_iter *)
+//int (*iterate) (struct file *, struct dir_context *);
+//int (*iterate_shared) (struct file *, struct dir_context *);
+
 
 const struct file_operations proxy_file_ops = {
 	.owner = THIS_MODULE,
@@ -275,7 +284,7 @@ const struct file_operations proxy_file_ops = {
 	.fallocate = proxy_fallocate,
 	.show_fdinfo = proxy_show_fdinfo,
 #ifndef CONFIG_MMU
- 	.mmap_capabilities = proxy_mmap_capabilities,
+	.mmap_capabilities = proxy_mmap_capabilities,
 #endif
 	.copy_file_range = proxy_copy_file_range,
 	.clone_file_range = proxy_clone_file_range,
