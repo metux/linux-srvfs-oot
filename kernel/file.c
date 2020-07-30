@@ -85,7 +85,7 @@ static ssize_t srvfs_file_read(struct file *file, char *buf,
 	if (newfile->f_op->name == NULL) \
 		pr_warn("assigned file misses " STR(name) " operation"); \
 	else \
-		pr_info("assigned file has " STR(name) " operation"); \
+		pr_info("assigned file has " STR(name) " operation: %pF", newfile->f_op->name); \
 
 static int do_switch(struct file *file, long fd)
 {

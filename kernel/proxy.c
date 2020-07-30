@@ -20,8 +20,10 @@
 
 #define PROXY_PASS_FILE(opname, args...) \
 	PROXY_INTRO \
-	if (target->f_op->opname) \
+	if (target->f_op->opname) { \
+		pr_info("proxy: %s() calling: %pF\n", __FUNCTION__, target->f_op->opname); \
 		return target->f_op->opname(args); \
+	} \
 	PROXY_RET(-EOPNOTSUPP); \
 
 #define PROXY_RET(x) \
@@ -208,10 +210,17 @@ static ssize_t proxy_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 		return -EFAULT;
 	}
 
-	pr_info("read_iter: calling original read_iter\n");
-	ret = target->f_op->read_iter(iocb, iter);
-	pr_info("read_iter: ret=%ld\n", ret);
-	return ret;
+	if (target->f_op->read_iter == generic_file_read_iter) {
+		pr_info("read_iter: equal generic_file_read_iter\n");
+	} else {
+		pr_info("read_iter: NOT generic_file_read_iter\n");
+	}
+
+	return -EINVAL;
+//	pr_info("read_iter: calling original read_iter\n");
+//	ret = target->f_op->read_iter(iocb, iter);
+//	pr_info("read_iter: ret=%ld\n", ret);
+//	return ret;
 }
 
 static ssize_t proxy_write_iter(struct kiocb* iocb, struct iov_iter *iter)
@@ -237,7 +246,7 @@ static int proxy_check_flags(int flags)
 
 #define COPY_FILEOP(opname) \
 	if (fileref->file->f_op->opname) { \
-		pr_info("assigning file operation " STR(opname) " ptr=%ld\n", (long)fileref->file->f_op->opname); \
+		pr_info("assigning file operation " STR(opname) " ptr=%pF\n", (long)fileref->file->f_op->opname); \
 		fileref->f_ops.opname = proxy_##opname; \
 	} else { \
 		pr_info("skipping NULL operation " STR(opname) "\n"); \
@@ -246,13 +255,12 @@ static int proxy_check_flags(int flags)
 
 #define TEST_FILEOP(opname) \
 	if (fileref->file->f_op->opname) { \
-		pr_info("got valid file operation " STR(opname) " ptr=%ld\n", (long)fileref->file->f_op->opname); \
+		pr_info("got valid file operation " STR(opname) " ptr=%pF\n", (long)fileref->file->f_op->opname); \
 	} else { \
 		pr_info("got NULL file operation " STR(opname) "\n"); \
 	}
 
 #define SET_FILEOP(opname) \
-	pr_info("fixed assigned file operation " STR(opname) "\n"); \
 	fileref->f_ops.opname = proxy_##opname;
 
 void srvfs_proxy_fill_fops(struct file *file)
