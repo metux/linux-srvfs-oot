@@ -18,21 +18,23 @@
 #define PROXY_NO_BACKEND \
 	pr_info("%s() no backend file handler\n", __FUNCTION__);
 
-#define PROXY_INVAL_RET \
-	PROXY_NO_BACKEND \
-	return -EINVAL;
-
 #define PROXY_RET(x) \
 	PROXY_NO_BACKEND \
 	return x;
-
-#define PROXY_NOTSUP_RET PROXY_RET(-ENOTSUPP)
 
 #define PASS_TO_VFS(vfsop, args...) \
 	{ \
 		PROXY_INTRO \
 		return vfsop(args); \
 	}
+
+#define PASS_TO_FILE(opname, defret, args...) \
+{ \
+	PROXY_INTRO \
+	if (target->f_op->opname) \
+		return target->f_op->opname(args); \
+	PROXY_RET(defret); \
+}
 
 /* === file operations passed to VFS === */
 
@@ -60,7 +62,6 @@ static int proxy_setlease(struct file *proxy, long arg,
 			  struct file_lock ** lease, void ** priv)
 	PASS_TO_VFS(vfs_setlease, target, arg, lease, priv);
 
-
 /* this *might* cause trouble w/ NFSd, which wants to retrieve 
    the conflicting lock */
 static int proxy_lock (struct file *proxy, int cmd, struct file_lock *fl)
@@ -68,24 +69,6 @@ static int proxy_lock (struct file *proxy, int cmd, struct file_lock *fl)
 
 /* === file operations passed directly to the backend file === */
 
-static void proxy_show_fdinfo(struct seq_file *m, struct file *proxy)
-{
-	PROXY_INTRO
-	if (target->f_op->show_fdinfo)
-		return target->f_op->show_fdinfo(m, target);
-	PROXY_NO_BACKEND
-}
-
-#define PASS_TO_FILE(opname, defret, args...) \
-{ \
-	PROXY_INTRO \
-	if (target->f_op->opname) \
-		return target->f_op->opname(args); \
-	PROXY_RET(defret); \
-}
-
-
-// FIXME
 static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 loff, u64 olen,
 				       struct file *dst_file, u64 dst_loff)
 	PASS_TO_FILE(dedupe_file_range, -EINVAL, target, loff, olen, dst_file,
@@ -121,7 +104,27 @@ static int proxy_clone_file_range(struct file *proxy, loff_t pos_in,
 	PASS_TO_FILE(clone_file_range, -EOPNOTSUPP, target, pos_in, file_out,
 		    pos_out, len);
 
+static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t len)
+	PASS_TO_FILE(fallocate, -EOPNOTSUPP, target, mode, offset, len);
+
+static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
+	PASS_TO_FILE(mmap, -ENODEV, target, vma);
+
+#ifndef CONFIG_MMU
+static unsigned proxy_mmap_capabilities(struct file *proxy)
+	PASS_TO_FILE(mmap_capabilities, -EOPNOTSUPP, target);
+#endif /* CONFIG_MMU */
+
+
 /* file operations with special implementation */
+
+static void proxy_show_fdinfo(struct seq_file *m, struct file *proxy)
+{
+	PROXY_INTRO
+	if (target->f_op->show_fdinfo)
+		return target->f_op->show_fdinfo(m, target);
+	PROXY_NO_BACKEND
+}
 
 static int proxy_open (struct inode *inode, struct file *proxy)
 {
@@ -169,27 +172,6 @@ static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
 	return locks_lock_file_wait(target, fl);
 }
 
-//FIXME
-static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
-{
-	PROXY_INTRO
-
-	if (target->f_op->mmap)
-		return target->f_op->mmap(target, vma);
-
-	PROXY_RET(-EOPNOTSUPP);
-}
-
-//FIXME
-/* not implemented yet
-static int proxy_check_flags(int flags)
-{
-	PROXY_INTRO
-	if (target->f_op->check_flags)
-		return target->f_op->check_flags(target, flags);
-	PROXY_RET(-EOPNOTSUPP);
-}
-*/
 
 // FIXME
 static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_inode_info *info, size_t size, unsigned int flags)
@@ -202,27 +184,18 @@ static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_in
 	PROXY_RET(-EOPNOTSUPP);
 }
 
-static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t len)
+// yet unimplemented .. do we need them at all ?
+
+//FIXME
+/* not implemented yet
+static int proxy_check_flags(int flags)
 {
 	PROXY_INTRO
-
-	if (target->f_op->fallocate)
-		return target->f_op->fallocate(target, mode, offset, len);
-
+	if (target->f_op->check_flags)
+		return target->f_op->check_flags(target, flags);
 	PROXY_RET(-EOPNOTSUPP);
 }
-
-#ifndef CONFIG_MMU
-static unsigned proxy_mmap_capabilities(struct file *proxy)
-{
-	PROXY_INTRO
-	if (target->f_op->mmap_capabilities)
-		return target->f_op->mmap_capabilities(target);
-	PROXY_NOTSUP_RET
-}
-#endif /* CONFIG_MMU */
-
-// yet unimplemented .. do we need them at all ?
+*/
 
 //static ssize_t proxy_read_iter (struct kiocb *, struct iov_iter *)
 //static ssize_t proxy_write_iter (struct kiocb *, struct iov_iter *)
