@@ -39,33 +39,41 @@
 /* === file operations passed to VFS === */
 
 static loff_t proxy_llseek (struct file *proxy, loff_t offset, int whence)
-	PASS_TO_VFS(vfs_llseek, target, offset, whence);
+//	PASS_TO_VFS(vfs_llseek, target, offset, whence);
+	PASS_TO_FILE(llseek, -EOPNOTSUPP, target, offset, whence);
 
 static ssize_t proxy_read (struct file *proxy, char __user *buf, size_t len, loff_t *offset)
-	PASS_TO_VFS(vfs_read, target, buf, len, offset);
+//	PASS_TO_VFS(vfs_read, target, buf, len, offset);
+	PASS_TO_FILE(read, -EOPNOTSUPP, target, buf, len, offset);
 
 static ssize_t proxy_write (struct file *proxy, const char __user *buf, size_t len, loff_t *offset)
-	PASS_TO_VFS(vfs_write, target, buf, len, offset);
+//	PASS_TO_VFS(vfs_write, target, buf, len, offset);
+	PASS_TO_FILE(write, -EOPNOTSUPP, target, buf, len, offset);
 
 static long proxy_unlocked_ioctl (struct file *proxy, unsigned int cmd, unsigned long arg)
-	PASS_TO_VFS(vfs_ioctl, target, cmd, arg);
+//	PASS_TO_VFS(vfs_ioctl, target, cmd, arg);
+	PASS_TO_FILE(unlocked_ioctl, -EOPNOTSUPP, target, cmd, arg);
 
 static int proxy_fsync (struct file *proxy, loff_t start, loff_t end, int datasync)
-	PASS_TO_VFS(vfs_fsync_range, target, start, end, datasync);
+//	PASS_TO_VFS(vfs_fsync_range, target, start, end, datasync);
+	PASS_TO_FILE(fsync, -EOPNOTSUPP, target, start, end, datasync);
 
 static ssize_t proxy_splice_write(struct pipe_inode_info *pipe,
 				  struct file *proxy, loff_t *ppos,
 				  size_t len, unsigned int flags)
-	PASS_TO_VFS(do_splice_from, pipe, target, ppos, len, flags);
+//	PASS_TO_VFS(do_splice_from, pipe, target, ppos, len, flags);
+	PASS_TO_FILE(splice_write, -EOPNOTSUPP, pipe, target, ppos, len, flags);
 
 static int proxy_setlease(struct file *proxy, long arg,
 			  struct file_lock ** lease, void ** priv)
-	PASS_TO_VFS(vfs_setlease, target, arg, lease, priv);
+//	PASS_TO_VFS(vfs_setlease, target, arg, lease, priv);
+	PASS_TO_FILE(setlease, -EOPNOTSUPP, target, arg, lease, priv);
 
 /* this *might* cause trouble w/ NFSd, which wants to retrieve 
    the conflicting lock */
 static int proxy_lock (struct file *proxy, int cmd, struct file_lock *fl)
-	PASS_TO_VFS(vfs_lock_file, target, cmd, fl, NULL);
+//	PASS_TO_VFS(vfs_lock_file, target, cmd, fl, NULL);
+	PASS_TO_FILE(lock, -EOPNOTSUPP, target, cmd, fl);
 
 /* === file operations passed directly to the backend file === */
 
