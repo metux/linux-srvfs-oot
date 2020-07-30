@@ -170,8 +170,48 @@ static int proxy_release(struct inode *inode, struct file *proxy)
 
 static ssize_t proxy_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 {
-	struct file *proxy = iocb->ki_filp;
-	PROXY_PASS_FILE(read_iter, iocb, iter);
+	struct file *proxy;
+	struct srvfs_fileref *fileref;
+	struct file *target;
+	ssize_t ret;
+
+	if (!iocb) {
+		pr_err("read_iter: iocb is NULL\n");
+		return -EFAULT;
+	}
+
+	proxy = iocb->ki_filp;
+	if (!proxy) {
+		pr_err("read_iter: proxy is NULL\n");
+		return -EFAULT;
+	}
+
+	fileref = proxy->private_data;
+	if (!fileref) {
+		pr_err("read_iter: fileref is NULL\n");
+		return -EFAULT;
+	}
+
+	target = fileref->file;
+	if (!target) {
+		pr_err("read_iter: target is NULL\n");
+		return -EFAULT;
+	}
+
+	if (!target->f_op) {
+		pr_err("read_iter: target->fop is NULL\n");
+		return -EFAULT;
+	}
+
+	if (!target->f_op->read_iter) {
+		pr_err("read_iter: target->fop->read_iter is NULL\n");
+		return -EFAULT;
+	}
+
+	pr_info("read_iter: calling original read_iter\n");
+	ret = target->f_op->read_iter(iocb, iter);
+	pr_info("read_iter: ret=%ld\n", ret);
+	return ret;
 }
 
 static ssize_t proxy_write_iter(struct kiocb* iocb, struct iov_iter *iter)
