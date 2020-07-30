@@ -238,3 +238,63 @@ const struct file_operations proxy_file_ops = {
 	.clone_file_range = proxy_clone_file_range,
 	.dedupe_file_range = proxy_dedupe_file_range,
 };
+
+#define STR(s) #s
+
+#define COPY_FILEOP(opname) \
+	if (file->f_op->opname) { \
+		pr_info("assigning file operation " STR(opname) "\n"); \
+		fileref->f_ops.opname = proxy_##opname; \
+	} else { \
+		pr_info("skipping operation " STR(opname) "\n"); \
+		fileref->f_ops.opname = NULL; \
+	}
+
+#define SET_FILEOP(opname) \
+	pr_info("auto assigning file operation " STR(opname) "\n"); \
+	fileref->f_ops.opname = proxy_##opname;
+
+void srvfs_proxy_fill_fops(struct file *file)
+{
+	struct srvfs_fileref *fileref = file->private_data;
+
+	fileref->f_ops.owner = THIS_MODULE;
+	memset(&fileref->f_ops, 0, sizeof(fileref->f_ops));
+
+	SET_FILEOP(open);
+	SET_FILEOP(release);
+
+	COPY_FILEOP(llseek);
+	COPY_FILEOP(read);
+	COPY_FILEOP(write);
+	COPY_FILEOP(fsync);
+	COPY_FILEOP(fasync);
+	COPY_FILEOP(poll);
+	COPY_FILEOP(unlocked_ioctl);
+	COPY_FILEOP(compat_ioctl);
+	COPY_FILEOP(mmap);
+	COPY_FILEOP(flush);
+	COPY_FILEOP(lock);
+	COPY_FILEOP(sendpage);
+	COPY_FILEOP(get_unmapped_area);
+	COPY_FILEOP(flock);
+	COPY_FILEOP(splice_write);
+	COPY_FILEOP(splice_read);
+	COPY_FILEOP(setlease);
+	COPY_FILEOP(fallocate);
+	COPY_FILEOP(show_fdinfo);
+	COPY_FILEOP(copy_file_range);
+	COPY_FILEOP(clone_file_range);
+	COPY_FILEOP(dedupe_file_range);
+#ifndef CONFIG_MMU
+	COPY_FILEOP(mmap_capabilities);
+#endif
+// cant support them yet :(
+//	.read_iter = proxy_read_iter,
+//	.write_iter = proxy_write_iter,
+//	.iterate = proxy_iterate,
+//	.iterate_shared = proxy_iterate_shared,
+//	.check_flags = proxy_check_flags,
+
+	file->f_op = &fileref->f_ops;
+}

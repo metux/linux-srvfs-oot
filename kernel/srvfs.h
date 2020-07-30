@@ -14,6 +14,7 @@ struct srvfs_fileref {
 	int mode;
 	struct file *file;
 	struct kref refcount;
+	struct file_operations f_ops;
 };
 
 struct srvfs_sb {
@@ -32,6 +33,8 @@ void srvfs_fileref_set(struct srvfs_fileref* fileref, struct file* newfile);
 int srvfs_fill_super (struct super_block *sb, void *data, int silent);
 int srvfs_inode_id (struct super_block *sb);
 int srvfs_insert_file (struct super_block *sb, struct dentry *dentry);
+
+void srvfs_proxy_fill_fops(struct file *file);
 
 /* private copies of non-exported kernel functions */
 long vfs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);

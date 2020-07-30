@@ -19,7 +19,8 @@ static int srvfs_file_open(struct inode *inode, struct file *file)
 
 	if (fileref->file) {
 		pr_info("open inode: already assigned another file\n");
-		file->f_op = &proxy_file_ops;
+		srvfs_proxy_fill_fops(file);
+//		file->f_op = &proxy_file_ops;
 	}
 	else {
 		pr_info("open inode: no file assigned yet\n");
