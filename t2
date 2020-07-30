@@ -4,20 +4,20 @@ set -e
 
 . ./_test.sh
 
-TESTBACK=/knollo
-TESTFILE=$TESTDIR/test-localfile
+TEST_BACKEND=/knollo
+TEST_FRONTEND=$TESTDIR/test-localfile
 
 log_info "assigning"
-tests/test-localfile $TESTDIR $TESTBACK
+tests/test-localfile $TESTDIR $TEST_BACKEND
 
 log_info "writing to backend"
-echo "HELLO WORLD" >> $TESTBACK
+echo "HELLO WORLD" >> $TEST_BACKEND
 
-log_info "catting mapped file"
-cat $TESTFILE
+log_info "catting frontend file"
+cat $TEST_FRONTEND
 
-log_info "appending to test file"
-echo "HUHUHU" >> $TESTFILE
+#log_info "appending to frontend file"
+#echo "HUHUHU" >> $TEST_FRONTEND
 
 log_info "catting backend"
-cat $TESTBACK
+cat $TEST_BACKEND
