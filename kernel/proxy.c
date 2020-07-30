@@ -201,8 +201,8 @@ void srvfs_proxy_fill_fops(struct file *file)
 {
 	struct srvfs_fileref *fileref = file->private_data;
 
-	fileref->f_ops.owner = THIS_MODULE;
 	memset(&fileref->f_ops, 0, sizeof(fileref->f_ops));
+	fileref->f_ops.owner = THIS_MODULE;
 
 	SET_FILEOP(open);
 	SET_FILEOP(release);
