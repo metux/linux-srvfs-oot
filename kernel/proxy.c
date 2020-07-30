@@ -178,9 +178,10 @@ static int proxy_check_flags(int flags)
 #define STR(s) #s
 
 #define COPY_FILEOP(opname) \
-	if (file->f_op->opname) { \
+	if (fileref->file->f_op->opname) { \
 		pr_info("assigning file operation " STR(opname) "\n"); \
 		fileref->f_ops.opname = proxy_##opname; \
+		pr_info("orig op ptr = %ld\n", (long)file->f_op->opname); \
 	} else { \
 		pr_info("skipping operation " STR(opname) "\n"); \
 		fileref->f_ops.opname = NULL; \
@@ -232,5 +233,6 @@ void srvfs_proxy_fill_fops(struct file *file)
 //	.iterate_shared = proxy_iterate_shared,
 //	.check_flags = proxy_check_flags,
 
+	pr_info("new fops table: %ld\n", (long)&fileref->f_ops);
 	file->f_op = &fileref->f_ops;
 }
