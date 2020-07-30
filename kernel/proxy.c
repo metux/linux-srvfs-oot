@@ -36,43 +36,33 @@
 	PROXY_RET(defret); \
 }
 
-/* === file operations passed to VFS === */
-
 static loff_t proxy_llseek (struct file *proxy, loff_t offset, int whence)
-//	PASS_TO_VFS(vfs_llseek, target, offset, whence);
 	PASS_TO_FILE(llseek, -EOPNOTSUPP, target, offset, whence);
 
 static ssize_t proxy_read (struct file *proxy, char __user *buf, size_t len, loff_t *offset)
-//	PASS_TO_VFS(vfs_read, target, buf, len, offset);
 	PASS_TO_FILE(read, -EOPNOTSUPP, target, buf, len, offset);
 
 static ssize_t proxy_write (struct file *proxy, const char __user *buf, size_t len, loff_t *offset)
-//	PASS_TO_VFS(vfs_write, target, buf, len, offset);
 	PASS_TO_FILE(write, -EOPNOTSUPP, target, buf, len, offset);
 
 static long proxy_unlocked_ioctl (struct file *proxy, unsigned int cmd, unsigned long arg)
-//	PASS_TO_VFS(vfs_ioctl, target, cmd, arg);
 	PASS_TO_FILE(unlocked_ioctl, -EOPNOTSUPP, target, cmd, arg);
 
 static int proxy_fsync (struct file *proxy, loff_t start, loff_t end, int datasync)
-//	PASS_TO_VFS(vfs_fsync_range, target, start, end, datasync);
 	PASS_TO_FILE(fsync, -EOPNOTSUPP, target, start, end, datasync);
 
 static ssize_t proxy_splice_write(struct pipe_inode_info *pipe,
 				  struct file *proxy, loff_t *ppos,
 				  size_t len, unsigned int flags)
-//	PASS_TO_VFS(do_splice_from, pipe, target, ppos, len, flags);
 	PASS_TO_FILE(splice_write, -EOPNOTSUPP, pipe, target, ppos, len, flags);
 
 static int proxy_setlease(struct file *proxy, long arg,
 			  struct file_lock ** lease, void ** priv)
-//	PASS_TO_VFS(vfs_setlease, target, arg, lease, priv);
 	PASS_TO_FILE(setlease, -EOPNOTSUPP, target, arg, lease, priv);
 
 /* this *might* cause trouble w/ NFSd, which wants to retrieve 
    the conflicting lock */
 static int proxy_lock (struct file *proxy, int cmd, struct file_lock *fl)
-//	PASS_TO_VFS(vfs_lock_file, target, cmd, fl, NULL);
 	PASS_TO_FILE(lock, -EOPNOTSUPP, target, cmd, fl);
 
 /* === file operations passed directly to the backend file === */
@@ -123,6 +113,18 @@ static unsigned proxy_mmap_capabilities(struct file *proxy)
 	PASS_TO_FILE(mmap_capabilities, -EOPNOTSUPP, target);
 #endif /* CONFIG_MMU */
 
+static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
+	PASS_TO_FILE(flock, -EOPNOTSUPP, target, flags, fl);
+
+static unsigned long proxy_get_unmapped_area(struct file *proxy,
+					     unsigned long orig_addr,
+					     unsigned long len,
+					     unsigned long pgoff,
+					     unsigned long flags)
+	PASS_TO_FILE(get_unmapped_area, -EOPNOTSUPP, target, orig_addr, len, pgoff, flags);
+
+static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_inode_info *info, size_t size, unsigned int flags)
+	PASS_TO_FILE(splice_read, -EOPNOTSUPP, target, off, info, size, flags);
 
 /* file operations with special implementation */
 
@@ -151,61 +153,6 @@ static int proxy_release (struct inode *inode, struct file *proxy)
 	return 0;
 }
 
-#if 0
-static unsigned long proxy_get_unmapped_area(struct file *proxy,
-					     unsigned long orig_addr,
-					     unsigned long len,
-					     unsigned long pgoff,
-					     unsigned long flags)
-{
-	PROXY_INTRO
-
-	/* emulate what get_unmapped_area() does when f_op->get_unmapped_area
-	   is NULL - call the current MM's get_unmapped_area() vector */
-	if (target->f_op->get_unmapped_area)
-		return target->f_op->get_unmapped_area(target, orig_addr,
-						       len, pgoff, flags);
-	else
-		return current->mm->get_unmapped_area(target, orig_addr,
-						      len, pgoff, flags);
-}
-#endif
-
-static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
-{
-	PROXY_INTRO
-
-	if (target->f_op->flock)
-		return target->f_op->flock(target, flags, fl);
-
-	/* I'm not completely sure, whether this fallback is really correct */
-	return locks_lock_file_wait(target, fl);
-}
-
-static unsigned long proxy_get_unmapped_area(struct file *proxy,
-					     unsigned long orig_addr,
-					     unsigned long len,
-					     unsigned long pgoff,
-					     unsigned long flags)
-	PASS_TO_FILE(get_unmapped_area, -EOPNOTSUPP, target, orig_addr, len, pgoff, flags);
-
-#if 0
-// FIXME
-static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_inode_info *info, size_t size, unsigned int flags)
-{
-	PROXY_INTRO
-
-	if (target->f_op->splice_read)
-		return target->f_op->splice_read(target, off, info, size, flags);
-
-	PROXY_RET(-EOPNOTSUPP);
-}
-#endif
-
-static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_inode_info *info, size_t size, unsigned int flags)
-	PASS_TO_FILE(splice_read, -EOPNOTSUPP, target, off, info, size, flags);
-
-
 // yet unimplemented .. do we need them at all ?
 
 //FIXME
@@ -223,44 +170,6 @@ static int proxy_check_flags(int flags)
 //static ssize_t proxy_write_iter (struct kiocb *, struct iov_iter *)
 //int (*iterate) (struct file *, struct dir_context *);
 //int (*iterate_shared) (struct file *, struct dir_context *);
-
-#if 0
-const struct file_operations proxy_file_ops = {
-	.owner = THIS_MODULE,
-	.llseek = proxy_llseek,
-	.open = proxy_open,
-	.read = proxy_read,
-	.write = proxy_write,
-//	.read_iter = proxy_read_iter,
-//	.write_iter = proxy_write_iter,
-//	.iterate = proxy_iterate,
-//	.iterate_shared = proxy_iterate_shared,
-	.poll = proxy_poll,
-	.unlocked_ioctl = proxy_unlocked_ioctl,
-	.compat_ioctl = proxy_compat_ioctl,
-	.mmap = proxy_mmap,
-	.flush = proxy_flush,
-	.release = proxy_release,
-	.fsync = proxy_fsync,
-	.fasync = proxy_fasync,
-	.lock = proxy_lock,
-	.sendpage = proxy_sendpage,
-	.get_unmapped_area = proxy_get_unmapped_area,
-//	.check_flags = proxy_check_flags,
-	.flock = proxy_flock,
-	.splice_write = proxy_splice_write,
-	.splice_read = proxy_splice_read,
-	.setlease = proxy_setlease,
-	.fallocate = proxy_fallocate,
-	.show_fdinfo = proxy_show_fdinfo,
-#ifndef CONFIG_MMU
-	.mmap_capabilities = proxy_mmap_capabilities,
-#endif
-	.copy_file_range = proxy_copy_file_range,
-	.clone_file_range = proxy_clone_file_range,
-	.dedupe_file_range = proxy_dedupe_file_range,
-};
-#endif
 
 #define STR(s) #s
 
