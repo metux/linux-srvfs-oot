@@ -20,6 +20,7 @@
 #include <linux/splice.h>
 #include <linux/highmem.h>
 
+/* copied from fs/splice.c -- unfortunately not exported */
 ssize_t splice_from_pipe(struct pipe_inode_info *pipe, struct file *out,
 			 loff_t *ppos, size_t len, unsigned int flags,
 			 splice_actor *actor)
