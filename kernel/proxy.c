@@ -11,7 +11,6 @@
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
 
-
 #define PROXY_INTRO \
 	struct srvfs_fileref *fileref = proxy->private_data; \
 	struct file *target = fileref->file; \
@@ -21,116 +20,47 @@
 #define PROXY_NOTSUP \
 	pr_info("%s() no backend file handler\n", __FUNCTION__);
 
+#define PROXY_INVAL_RET \
+	PROXY_NOTSUP \
+	return -EINVAL;
+
 #define PROXY_NOTSUP_RET \
 	PROXY_NOTSUP \
 	return -ENOTSUPP;
 
-static loff_t proxy_llseek (struct file *proxy, loff_t offset, int mode)
-{
-	PROXY_INTRO
-	if (target->f_op->llseek)
-		return target->f_op->llseek(target, offset, mode);
-	PROXY_NOTSUP_RET
-}
+#define PROXY_RET(x) \
+	PROXY_NOTSUP \
+	return x;
+
+#define PASS_TO_VFS(vfsop, args...) \
+	{ \
+		PROXY_INTRO \
+		return vfsop(args); \
+	}
+
+/* file operations passed to VFS */
+
+static loff_t proxy_llseek (struct file *proxy, loff_t offset, int whence)
+	PASS_TO_VFS(vfs_llseek, target, offset, whence);
 
 static ssize_t proxy_read (struct file *proxy, char __user *buf, size_t len, loff_t *offset)
-{
-	PROXY_INTRO
-	if (target->f_op->read)
-		return target->f_op->read(target, buf, len, offset);
-	PROXY_NOTSUP_RET
-}
+	PASS_TO_VFS(vfs_read, target, buf, len, offset);
 
 static ssize_t proxy_write (struct file *proxy, const char __user *buf, size_t len, loff_t *offset)
-{
-	PROXY_INTRO
-	if (target->f_op->write)
-		return target->f_op->write(target, buf, len, offset);
-	PROXY_NOTSUP_RET
-}
+	PASS_TO_VFS(vfs_write, target, buf, len, offset);
 
-//static ssize_t proxy_read_iter (struct kiocb *, struct iov_iter *)
-//static ssize_t proxy_write_iter (struct kiocb *, struct iov_iter *)
-//int (*iterate) (struct file *, struct dir_context *);
-//int (*iterate_shared) (struct file *, struct dir_context *);
+static long proxy_unlocked_ioctl (struct file *proxy, unsigned int cmd, unsigned long arg)
+	PASS_TO_VFS(vfs_ioctl, target, cmd, arg);
 
-static unsigned int proxy_poll (struct file *proxy, struct poll_table_struct *poll)
-{
-	PROXY_INTRO
-	if (target->f_op->poll)
-		return target->f_op->poll(target, poll);
-	PROXY_NOTSUP_RET
-}
+static int proxy_fsync (struct file *proxy, loff_t start, loff_t end, int datasync)
+	PASS_TO_VFS(vfs_fsync_range, target, start, end, datasync);
 
-static long proxy_unlocked_ioctl (struct file *proxy, unsigned int a, unsigned long b)
-{
-	PROXY_INTRO
-	if (target->f_op->unlocked_ioctl)
-		return target->f_op->unlocked_ioctl(target, a, b);
-	PROXY_NOTSUP_RET
-}
+static ssize_t proxy_splice_write(struct pipe_inode_info *pipe,
+				  struct file *proxy, loff_t *ppos,
+				  size_t len, unsigned int flags)
+	PASS_TO_VFS(do_splice_from, pipe, target, ppos, len, flags);
 
-static long proxy_compat_ioctl (struct file *proxy, unsigned int a, unsigned long b)
-{
-	PROXY_INTRO
-	if (target->f_op->compat_ioctl)
-		return target->f_op->compat_ioctl(target, a, b);
-	PROXY_NOTSUP_RET
-}
-
-static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
-{
-	PROXY_INTRO
-	if (target->f_op->mmap)
-		return target->f_op->mmap(target, vma);
-	PROXY_NOTSUP_RET
-}
-
-static int proxy_open (struct inode *inode, struct file *proxy)
-{
-	PROXY_INTRO
-	pr_info("%s() not implemented yet\n", __FUNCTION__);
-	PROXY_NOTSUP_RET
-}
-
-int proxy_flush (struct file *proxy, fl_owner_t id)
-{
-	PROXY_INTRO
-	if (target->f_op->flush)
-		return target->f_op->flush(target, id);
-	PROXY_NOTSUP_RET
-}
-
-/* NOTE: we're NOT passing this down to the target, this would break
-   heavily as the file descriptor is still in use
-
-   We probably should do some book keeping in order to prevent the
-   proxy file from begin removed while its still open. or at least
-   the target file and associated private data
-*/
-static int proxy_release (struct inode *inode, struct file *proxy)
-{
-	PROXY_INTRO
-	(void)(inode);
-	srvfs_fileref_put(fileref);
-	return 0;
-}
-
-static int proxy_fsync (struct file *proxy, loff_t off1, loff_t off2, int datasync)
-{
-	PROXY_INTRO
-	if (target->f_op->fsync)
-		return target->f_op->fsync(target, off1, off2, datasync);
-	PROXY_NOTSUP_RET
-}
-
-static int proxy_fasync (int x, struct file *proxy, int y)
-{
-	PROXY_INTRO
-	if (target->f_op->fasync)
-		return target->f_op->fasync(x, target, y);
-	PROXY_NOTSUP_RET
-}
+/* file operations passed directly to the backend file */
 
 static int proxy_lock (struct file *proxy, int flags, struct file_lock *lock)
 {
@@ -140,6 +70,7 @@ static int proxy_lock (struct file *proxy, int flags, struct file_lock *lock)
 	PROXY_NOTSUP_RET
 }
 
+// FIXME
 static int proxy_flock (struct file *proxy, int flags, struct file_lock *lock)
 {
 	PROXY_INTRO
@@ -148,19 +79,99 @@ static int proxy_flock (struct file *proxy, int flags, struct file_lock *lock)
 	PROXY_NOTSUP_RET
 }
 
-static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int x, size_t size, loff_t *offset, int flags)
-{
-	PROXY_INTRO
-	if (target->f_op->sendpage)
-		return target->f_op->sendpage(target, page, x, size, offset, flags);
-	PROXY_NOTSUP_RET
-}
-
+// FIXME
 static unsigned long proxy_get_unmapped_area(struct file *proxy, unsigned long a, unsigned long b, unsigned long c, unsigned long d)
 {
 	PROXY_INTRO
 	if (target->f_op->get_unmapped_area)
 		return target->f_op->get_unmapped_area(target, a, b, c, d);
+	PROXY_NOTSUP_RET
+}
+
+static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 loff, u64 olen,
+				       struct file *dst_file, u64 dst_loff)
+{
+	PROXY_INTRO
+	if (target->f_op->dedupe_file_range)
+		return target->f_op->dedupe_file_range(target, loff, olen,
+						       dst_file, dst_loff);
+	PROXY_RET(-EINVAL);
+}
+
+static int proxy_flush (struct file *proxy, fl_owner_t id)
+{
+	PROXY_INTRO
+	if (target->f_op->flush)
+		return target->f_op->flush(target, id);
+	PROXY_RET(0);
+}
+
+static long proxy_compat_ioctl (struct file *proxy, unsigned int a, unsigned long b)
+{
+	PROXY_INTRO
+	if (target->f_op->compat_ioctl)
+		return target->f_op->compat_ioctl(target, a, b);
+	PROXY_RET(-ENOIOCTLCMD);
+}
+
+static int proxy_fasync (int x, struct file *proxy, int y)
+{
+	PROXY_INTRO
+	if (target->f_op->fasync)
+		return target->f_op->fasync(x, target, y);
+	PROXY_RET(0)
+}
+
+/* file operations with special implementation */
+
+static int proxy_open (struct inode *inode, struct file *proxy)
+{
+	PROXY_INTRO
+	pr_info("%s() should never be called\n", __FUNCTION__);
+	WARN_ON(1);
+	PROXY_NOTSUP_RET
+}
+
+static int proxy_release (struct inode *inode, struct file *proxy)
+{
+	PROXY_INTRO
+	(void)(inode);
+	pr_info("closing proxy inode_id=%ld\n", inode->i_ino);
+	srvfs_fileref_put(fileref);
+	return 0;
+}
+
+static unsigned int proxy_poll (struct file *proxy, struct poll_table_struct *poll)
+{
+	PROXY_INTRO
+	if (target->f_op->poll)
+		return target->f_op->poll(target, poll);
+	// FIXME: should we return -EPERM instead ?
+	PROXY_RET(0)
+}
+
+// yet unimplemented .. do we need them at all ?
+
+//static ssize_t proxy_read_iter (struct kiocb *, struct iov_iter *)
+//static ssize_t proxy_write_iter (struct kiocb *, struct iov_iter *)
+//int (*iterate) (struct file *, struct dir_context *);
+//int (*iterate_shared) (struct file *, struct dir_context *);
+
+//FIXME
+static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
+{
+	PROXY_INTRO
+	if (target->f_op->mmap)
+		return target->f_op->mmap(target, vma);
+	PROXY_NOTSUP_RET
+}
+
+// FIXME
+static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int x, size_t size, loff_t *offset, int flags)
+{
+	PROXY_INTRO
+	if (target->f_op->sendpage)
+		return target->f_op->sendpage(target, page, x, size, offset, flags);
 	PROXY_NOTSUP_RET
 }
 
@@ -174,14 +185,7 @@ static int proxy_check_flags(int flags)
 }
 */
 
-static ssize_t proxy_splice_write(struct pipe_inode_info *info, struct file *proxy, loff_t *off, size_t size, unsigned int flags)
-{
-	PROXY_INTRO
-	if (target->f_op->splice_write)
-		return target->f_op->splice_write(info, target, off, size, flags);
-	PROXY_NOTSUP_RET
-}
-
+// FIXME
 static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_inode_info *info, size_t size, unsigned int flags)
 {
 	PROXY_INTRO
@@ -190,6 +194,7 @@ static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_in
 	PROXY_NOTSUP_RET
 }
 
+// FIXME
 static int proxy_setlease(struct file *proxy, long a, struct file_lock ** lock, void ** b)
 {
 	PROXY_INTRO
@@ -198,6 +203,7 @@ static int proxy_setlease(struct file *proxy, long a, struct file_lock ** lock, 
 	PROXY_NOTSUP_RET
 }
 
+// FIXME
 static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t len)
 {
 	PROXY_INTRO
@@ -206,6 +212,7 @@ static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t 
 	PROXY_NOTSUP_RET
 }
 
+// FIXME
 static void proxy_show_fdinfo(struct seq_file *m, struct file *proxy)
 {
 	PROXY_INTRO
@@ -224,6 +231,7 @@ static unsigned proxy_mmap_capabilities(struct file *proxy)
 }
 #endif /* CONFIG_MMU */
 
+// FIXME
 static ssize_t proxy_copy_file_range(struct file *proxy, loff_t off1, struct file *file2,
 	loff_t off2, size_t size, unsigned int flags)
 {
@@ -233,6 +241,7 @@ static ssize_t proxy_copy_file_range(struct file *proxy, loff_t off1, struct fil
 	PROXY_NOTSUP_RET
 }
 
+// FIXME
 static int proxy_clone_file_range(struct file *proxy, loff_t off1, struct file *file2, loff_t off2, u64 flags)
 {
 	PROXY_INTRO
@@ -241,16 +250,9 @@ static int proxy_clone_file_range(struct file *proxy, loff_t off1, struct file *
 	PROXY_NOTSUP_RET
 }
 
-static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 pos1, u64 pos2, struct file *file2, u64 pos3)
-{
-	PROXY_INTRO
-	if (target->f_op->dedupe_file_range)
-		return target->f_op->dedupe_file_range(target, pos1, pos2, file2, pos3);
-	PROXY_NOTSUP_RET
-}
+// FIXME
 
 const struct file_operations proxy_file_ops = {
-//	maybe this creates refcounting problems
 	.owner = THIS_MODULE,
 	.llseek = proxy_llseek,
 	.open = proxy_open,

@@ -1,0 +1,9 @@
+
+2DO:
+    * locking:
+        * yet completely untested
+        * needs deeper revision, just returning 0 on unimplemented fops
+          might not be enough, seems there's a generic implementation
+          we need to call instead
+        * see various functions in fs/lock.c
+        * what does is_remote_lock() do ?

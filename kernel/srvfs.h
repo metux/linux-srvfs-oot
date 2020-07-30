@@ -31,4 +31,9 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent);
 int srvfs_inode_id (struct super_block *sb);
 int srvfs_insert_file (struct super_block *sb, struct dentry *dentry);
 
+/* private copies of non-exported kernel functions */
+long vfs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
+long do_splice_from(struct pipe_inode_info *pipe, struct file *out,
+		    loff_t *ppos, size_t len, unsigned int flags);
+
 #endif /* __LINUX_FS_SRVFS_H */

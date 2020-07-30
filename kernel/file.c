@@ -31,7 +31,7 @@ static int srvfs_file_open(struct inode *inode, struct file *file)
 static int srvfs_file_release(struct inode *inode, struct file *file)
 {
 	struct srvfs_fileref *fileref = file->private_data;
-	pr_info("closing inode_id=%ld\n", inode->i_ino);
+	pr_info("closing vanilla control file: inode_id=%ld\n", inode->i_ino);
 	srvfs_fileref_put(fileref);
 	return 0;
 }
@@ -80,8 +80,8 @@ static ssize_t srvfs_file_read(struct file *file, char *buf,
 
 #define STR(s) #s
 
-#define CHECK_OP(name)	\
-	if (!newfile->f_op->name) \
+#define CHECK_OP(name) \
+	if (newfile->f_op->name == NULL) \
 		pr_warn("assigned file misses " STR(name) " operation"); \
 	else \
 		pr_info("assigned file has " STR(name) " operation"); \
@@ -106,6 +106,12 @@ static int do_switch(struct file *file, long fd)
 		pr_err("whoops. trying to link inode within same fs!\n");
 		goto loop;
 	}
+
+	pr_info("assigning inode %ld\n", newfile->f_inode->i_ino);
+	if (newfile && newfile->f_path.dentry)
+		pr_info("target inode fn: %s\n", newfile->f_path.dentry->d_name.name);
+	else
+		pr_info("target inode fn unknown\n");
 
 	CHECK_OP(read)
 	CHECK_OP(write)
