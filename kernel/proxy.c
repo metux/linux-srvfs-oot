@@ -151,6 +151,7 @@ static int proxy_release (struct inode *inode, struct file *proxy)
 	return 0;
 }
 
+#if 0
 static unsigned long proxy_get_unmapped_area(struct file *proxy,
 					     unsigned long orig_addr,
 					     unsigned long len,
@@ -168,6 +169,7 @@ static unsigned long proxy_get_unmapped_area(struct file *proxy,
 		return current->mm->get_unmapped_area(target, orig_addr,
 						      len, pgoff, flags);
 }
+#endif
 
 static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
 {
@@ -180,7 +182,14 @@ static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
 	return locks_lock_file_wait(target, fl);
 }
 
+static unsigned long proxy_get_unmapped_area(struct file *proxy,
+					     unsigned long orig_addr,
+					     unsigned long len,
+					     unsigned long pgoff,
+					     unsigned long flags)
+	PASS_TO_FILE(get_unmapped_area, -EOPNOTSUPP, target, orig_addr, len, pgoff, flags);
 
+#if 0
 // FIXME
 static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_inode_info *info, size_t size, unsigned int flags)
 {
@@ -191,6 +200,11 @@ static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_in
 
 	PROXY_RET(-EOPNOTSUPP);
 }
+#endif
+
+static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_inode_info *info, size_t size, unsigned int flags)
+	PASS_TO_FILE(splice_read, -EOPNOTSUPP, target, off, info, size, flags);
+
 
 // yet unimplemented .. do we need them at all ?
 
@@ -210,7 +224,7 @@ static int proxy_check_flags(int flags)
 //int (*iterate) (struct file *, struct dir_context *);
 //int (*iterate_shared) (struct file *, struct dir_context *);
 
-
+#if 0
 const struct file_operations proxy_file_ops = {
 	.owner = THIS_MODULE,
 	.llseek = proxy_llseek,
@@ -246,6 +260,7 @@ const struct file_operations proxy_file_ops = {
 	.clone_file_range = proxy_clone_file_range,
 	.dedupe_file_range = proxy_dedupe_file_range,
 };
+#endif
 
 #define STR(s) #s
 
