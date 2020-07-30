@@ -1,5 +1,3 @@
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include "srvfs.h"
 
 #include <linux/kernel.h>

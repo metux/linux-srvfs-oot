@@ -1,6 +1,8 @@
 #ifndef __LINUX_FS_SRVFS_H
 #define __LINUX_FS_SRVFS_H
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/fs.h>
 #include <linux/kref.h>
 #include <asm/atomic.h>

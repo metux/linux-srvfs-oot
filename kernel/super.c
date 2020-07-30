@@ -1,5 +1,3 @@
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include "srvfs.h"
 
 #include <linux/kernel.h>
@@ -71,10 +69,8 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	int ret = 0;
 
 	sbpriv = kmalloc(sizeof(struct srvfs_sb), GFP_KERNEL);
-	if (sbpriv == NULL) {
-		pr_err("cant alloc srvfs_sb private\n");
+	if (sbpriv == NULL)
 		goto err_sbpriv;
-	}
 
 	atomic_set(&sbpriv->inode_counter, 1);
 
@@ -86,10 +82,8 @@ int srvfs_fill_super (struct super_block *sb, void *data, int silent)
 	sb->s_fs_info = sbpriv;
 
 	inode = new_inode(sb);
-	if (!inode) {
-		pr_err("cant allocate root inode\n");
+	if (!inode)
 		goto err_inode;
-	}
 
 	/*
 	 * because the root inode is 1, the files array must not contain an

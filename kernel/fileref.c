@@ -49,9 +49,8 @@ void srvfs_fileref_set(struct srvfs_fileref *fileref, struct file *newfile)
 {
 	struct file *oldfile;
 
-	if (!newfile) {
+	if (!newfile)
 		pr_info("no valid file descriptor. clearing\n");
-	}
 
 	oldfile = fileref->file;
 	fileref->file = newfile;

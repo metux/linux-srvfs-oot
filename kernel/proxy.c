@@ -1,5 +1,3 @@
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include "srvfs.h"
 
 #include <linux/kernel.h>
@@ -62,6 +60,7 @@ static int proxy_setlease(struct file *proxy, long arg,
 			  struct file_lock ** lease, void ** priv)
 	PASS_TO_VFS(vfs_setlease, target, arg, lease, priv);
 
+
 /* this *might* cause trouble w/ NFSd, which wants to retrieve 
    the conflicting lock */
 static int proxy_lock (struct file *proxy, int cmd, struct file_lock *fl)
@@ -109,9 +108,21 @@ static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int offs,
 			       size_t len, loff_t *pos, int more)
 	PASS_TO_FILE(sendpage, -EINVAL, target, page, offs, len, pos, more);
 
-static unsigned int proxy_poll (struct file *proxy, struct poll_table_struct *pt)
+static unsigned int proxy_poll (struct file *proxy,
+				struct poll_table_struct *pt)
 	// FIXME: should we return -EPERM instead ?
 	PASS_TO_FILE(poll, 0, target, pt);
+
+static ssize_t proxy_copy_file_range(struct file *proxy, loff_t pos_in,
+	struct file *file_out, loff_t pos_out, size_t size, unsigned int flags)
+	PASS_TO_FILE(copy_file_range, -EOPNOTSUPP, target, pos_in, file_out,
+		     pos_out, size, flags);
+
+static int proxy_clone_file_range(struct file *proxy, loff_t pos_in,
+				  struct file *file_out, loff_t pos_out,
+				  u64 len)
+	PASS_TO_FILE(clone_file_range, -EOPNOTSUPP, target, pos_in, file_out,
+		    pos_out, len);
 
 /* file operations with special implementation */
 
@@ -197,25 +208,6 @@ static unsigned proxy_mmap_capabilities(struct file *proxy)
 	PROXY_NOTSUP_RET
 }
 #endif /* CONFIG_MMU */
-
-// FIXME
-static ssize_t proxy_copy_file_range(struct file *proxy, loff_t off1, struct file *file2,
-	loff_t off2, size_t size, unsigned int flags)
-{
-	PROXY_INTRO
-	if (target->f_op->copy_file_range)
-		return target->f_op->copy_file_range(target, off1, file2, off2, size, flags);
-	PROXY_NOTSUP_RET
-}
-
-// FIXME
-static int proxy_clone_file_range(struct file *proxy, loff_t off1, struct file *file2, loff_t off2, u64 flags)
-{
-	PROXY_INTRO
-	if (target->f_op->clone_file_range)
-		return target->f_op->clone_file_range(target, off1, file2, off2, flags);
-	PROXY_NOTSUP_RET
-}
 
 // yet unimplemented .. do we need them at all ?
 
