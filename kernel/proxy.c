@@ -64,15 +64,12 @@ static int proxy_setlease(struct file *proxy, long arg,
 			  struct file_lock ** lease, void ** priv)
 	PASS_TO_VFS(vfs_setlease, target, arg, lease, priv);
 
-/* file operations passed directly to the backend file */
+/* this *might* cause trouble w/ NFSd, which wants to retrieve 
+   the conflicting lock */
+static int proxy_lock (struct file *proxy, int cmd, struct file_lock *fl)
+	PASS_TO_VFS(vfs_lock_file, target, cmd, fl, NULL);
 
-static int proxy_lock (struct file *proxy, int flags, struct file_lock *lock)
-{
-	PROXY_INTRO
-	if (target->f_op->lock)
-		return target->f_op->lock(target, flags, lock);
-	PROXY_NOTSUP_RET
-}
+/* file operations passed directly to the backend file */
 
 // FIXME
 static int proxy_flock (struct file *proxy, int flags, struct file_lock *lock)
