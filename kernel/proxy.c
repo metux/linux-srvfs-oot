@@ -246,7 +246,7 @@ static int proxy_check_flags(int flags)
 
 #define COPY_FILEOP(opname) \
 	if (fileref->file->f_op->opname) { \
-		pr_info("assigning file operation " STR(opname) " ptr=%pF\n", (long)fileref->file->f_op->opname); \
+		pr_info("assigning file operation " STR(opname) " ptr=%pF\n", fileref->file->f_op->opname); \
 		fileref->f_ops.opname = proxy_##opname; \
 	} else { \
 		pr_info("skipping NULL operation " STR(opname) "\n"); \
@@ -255,7 +255,7 @@ static int proxy_check_flags(int flags)
 
 #define TEST_FILEOP(opname) \
 	if (fileref->file->f_op->opname) { \
-		pr_info("got valid file operation " STR(opname) " ptr=%pF\n", (long)fileref->file->f_op->opname); \
+		pr_info("got valid file operation " STR(opname) " ptr=%pF\n", fileref->file->f_op->opname); \
 	} else { \
 		pr_info("got NULL file operation " STR(opname) "\n"); \
 	}
