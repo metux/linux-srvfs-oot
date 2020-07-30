@@ -177,26 +177,13 @@ static ssize_t proxy_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 	struct file *proxy = iocb->ki_filp;
 	PROXY_INTRO
 
-	BUG_ON(!fileref);
-	BUG_ON(!target);
-	BUG_ON(!target->f_op);
-
-	if (!target->f_op->read_iter) {
-		pr_err("read_iter: target->fop->read_iter is NULL\n");
-		return -EFAULT;
-	}
-
-	BUG_ON(!target->f_op->read_iter);
-
-	// real hard work beginning here
 	/* create a kiocb for the target file */
 	init_sync_kiocb(&target_iocb, target);
 	target_iocb.ki_pos = iocb->ki_pos;
+
 	// FIXME: do we also need to tweak ki_flags ? */
 
 	/* call the actual handler */
-	pr_info("read_iter: the actual op: %pF\n", target->f_op->read_iter);
-
 	ret = target->f_op->read_iter(&target_iocb, iter);
 
 	/* write back to proxy iocb */
@@ -212,18 +199,6 @@ static ssize_t proxy_write_iter(struct kiocb *iocb, struct iov_iter *iter)
 	struct kiocb target_iocb;
 	PROXY_INTRO
 
-	BUG_ON(!fileref);
-	BUG_ON(!target);
-	BUG_ON(!target->f_op);
-
-	if (!target->f_op->read_iter) {
-		pr_err("write_iter: target->fop->read_iter is NULL\n");
-		return -EFAULT;
-	}
-
-	BUG_ON(!target->f_op->read_iter);
-
-	// real hard work beginning here
 	/* create a kiocb for the target file */
 	init_sync_kiocb(&target_iocb, target);
 	target_iocb.ki_pos = iocb->ki_pos;
@@ -231,8 +206,6 @@ static ssize_t proxy_write_iter(struct kiocb *iocb, struct iov_iter *iter)
 	// FIXME: do we also need to tweak ki_flags ? */
 
 	/* call the actual handler */
-	pr_info("write_iter: the actual op: %pF\n", target->f_op->write_iter);
-
 	ret = target->f_op->write_iter(&target_iocb, iter);
 
 	/* write back to proxy iocb */
@@ -258,10 +231,10 @@ static int proxy_check_flags(int flags)
 
 #define COPY_FILEOP(opname) \
 	if (fileref->file->f_op->opname) { \
-		pr_info("assigning file operation " STR(opname) " ptr=%pF\n", fileref->file->f_op->opname); \
+		pr_info("assigning " STR(opname) " ptr=%pF\n", fileref->file->f_op->opname); \
 		fileref->f_ops.opname = proxy_##opname; \
 	} else { \
-		pr_info("skipping NULL operation " STR(opname) "\n"); \
+		pr_info("assigning " STR(opname) " <NULL>\n"); \
 		fileref->f_ops.opname = NULL; \
 	}
 
