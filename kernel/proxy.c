@@ -60,6 +60,10 @@ static ssize_t proxy_splice_write(struct pipe_inode_info *pipe,
 				  size_t len, unsigned int flags)
 	PASS_TO_VFS(do_splice_from, pipe, target, ppos, len, flags);
 
+static int proxy_setlease(struct file *proxy, long arg,
+			  struct file_lock ** lease, void ** priv)
+	PASS_TO_VFS(vfs_setlease, target, arg, lease, priv);
+
 /* file operations passed directly to the backend file */
 
 static int proxy_lock (struct file *proxy, int flags, struct file_lock *lock)
@@ -195,13 +199,6 @@ static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_in
 }
 
 // FIXME
-static int proxy_setlease(struct file *proxy, long a, struct file_lock ** lock, void ** b)
-{
-	PROXY_INTRO
-	if (target->f_op->setlease)
-		return target->f_op->setlease(target, a, lock, b);
-	PROXY_NOTSUP_RET
-}
 
 // FIXME
 static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t len)
