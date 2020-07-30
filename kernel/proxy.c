@@ -172,21 +172,12 @@ static int proxy_release(struct inode *inode, struct file *proxy)
 
 static ssize_t proxy_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 {
-	struct file *proxy;
-	struct srvfs_fileref *fileref;
-	struct file *target;
 	ssize_t ret;
 	struct kiocb target_iocb;
+	struct file *proxy = iocb->ki_filp;
+	PROXY_INTRO
 
-	BUG_ON(!iocb);
-	BUG_ON(!iocb->ki_filp);
-
-	proxy = iocb->ki_filp;
-
-	fileref = proxy->private_data;
 	BUG_ON(!fileref);
-
-	target = fileref->file;
 	BUG_ON(!target);
 	BUG_ON(!target->f_op);
 
@@ -214,10 +205,40 @@ static ssize_t proxy_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 	return ret;
 }
 
-static ssize_t proxy_write_iter(struct kiocb* iocb, struct iov_iter *iter)
+static ssize_t proxy_write_iter(struct kiocb *iocb, struct iov_iter *iter)
 {
+	ssize_t ret;
 	struct file *proxy = iocb->ki_filp;
-	PROXY_PASS_FILE(write_iter, iocb, iter);
+	struct kiocb target_iocb;
+	PROXY_INTRO
+
+	BUG_ON(!fileref);
+	BUG_ON(!target);
+	BUG_ON(!target->f_op);
+
+	if (!target->f_op->read_iter) {
+		pr_err("write_iter: target->fop->read_iter is NULL\n");
+		return -EFAULT;
+	}
+
+	BUG_ON(!target->f_op->read_iter);
+
+	// real hard work beginning here
+	/* create a kiocb for the target file */
+	init_sync_kiocb(&target_iocb, target);
+	target_iocb.ki_pos = iocb->ki_pos;
+
+	// FIXME: do we also need to tweak ki_flags ? */
+
+	/* call the actual handler */
+	pr_info("write_iter: the actual op: %pF\n", target->f_op->write_iter);
+
+	ret = target->f_op->write_iter(&target_iocb, iter);
+
+	/* write back to proxy iocb */
+	iocb->ki_pos = target_iocb.ki_pos;
+
+	return ret;
 }
 
 // yet unimplemented .. do we need them at all ?
@@ -287,7 +308,7 @@ void srvfs_proxy_fill_fops(struct file *file)
 	COPY_FILEOP(clone_file_range);
 	COPY_FILEOP(dedupe_file_range);
 	COPY_FILEOP(read_iter);
-//	COPY_FILEOP(write_iter);
+	COPY_FILEOP(write_iter);
 	COPY_FILEOP(iterate);
 	COPY_FILEOP(iterate_shared);
 #ifndef CONFIG_MMU
