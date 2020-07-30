@@ -179,16 +179,22 @@ static int proxy_check_flags(int flags)
 
 #define COPY_FILEOP(opname) \
 	if (fileref->file->f_op->opname) { \
-		pr_info("assigning file operation " STR(opname) "\n"); \
+		pr_info("assigning file operation " STR(opname) " ptr=%ld\n", (long)fileref->file->f_op->opname); \
 		fileref->f_ops.opname = proxy_##opname; \
-		pr_info("orig op ptr = %ld\n", (long)file->f_op->opname); \
 	} else { \
-		pr_info("skipping operation " STR(opname) "\n"); \
+		pr_info("skipping NULL operation " STR(opname) "\n"); \
 		fileref->f_ops.opname = NULL; \
 	}
 
+#define TEST_FILEOP(opname) \
+	if (fileref->file->f_op->opname) { \
+		pr_info("got valid file operation " STR(opname) " ptr=%ld\n", (long)fileref->file->f_op->opname); \
+	} else { \
+		pr_info("got NULL file operation " STR(opname) "\n"); \
+	}
+
 #define SET_FILEOP(opname) \
-	pr_info("auto assigning file operation " STR(opname) "\n"); \
+	pr_info("fixed assigned file operation " STR(opname) "\n"); \
 	fileref->f_ops.opname = proxy_##opname;
 
 void srvfs_proxy_fill_fops(struct file *file)
@@ -226,6 +232,13 @@ void srvfs_proxy_fill_fops(struct file *file)
 #ifndef CONFIG_MMU
 	COPY_FILEOP(mmap_capabilities);
 #endif
+
+	TEST_FILEOP(read_iter);
+	TEST_FILEOP(write_iter);
+	TEST_FILEOP(iterate);
+	TEST_FILEOP(iterate_shared);
+	TEST_FILEOP(check_flags);
+
 // cant support them yet :(
 //	.read_iter = proxy_read_iter,
 //	.write_iter = proxy_write_iter,
