@@ -85,7 +85,7 @@ static unsigned long proxy_get_unmapped_area(struct file *proxy, unsigned long a
 	PROXY_INTRO
 	if (target->f_op->get_unmapped_area)
 		return target->f_op->get_unmapped_area(target, a, b, c, d);
-	PROXY_NOTSUP_RET
+	PROXY_RET(-ENOTSUPP);
 }
 
 static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 loff, u64 olen,
@@ -122,6 +122,15 @@ static int proxy_fasync (int x, struct file *proxy, int y)
 	PROXY_RET(0)
 }
 
+static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int x,
+			       size_t size, loff_t *offset, int flags)
+{
+	PROXY_INTRO
+	if (target->f_op->sendpage)
+		return target->f_op->sendpage(target, page, x, size, offset, flags);
+	PROXY_RET(-EINVAL);
+}
+
 /* file operations with special implementation */
 
 static int proxy_open (struct inode *inode, struct file *proxy)
@@ -129,7 +138,7 @@ static int proxy_open (struct inode *inode, struct file *proxy)
 	PROXY_INTRO
 	pr_info("%s() should never be called\n", __FUNCTION__);
 	WARN_ON(1);
-	PROXY_NOTSUP_RET
+	PROXY_RET(-EINVAL);
 }
 
 static int proxy_release (struct inode *inode, struct file *proxy)
@@ -163,15 +172,6 @@ static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
 	PROXY_INTRO
 	if (target->f_op->mmap)
 		return target->f_op->mmap(target, vma);
-	PROXY_NOTSUP_RET
-}
-
-// FIXME
-static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int x, size_t size, loff_t *offset, int flags)
-{
-	PROXY_INTRO
-	if (target->f_op->sendpage)
-		return target->f_op->sendpage(target, page, x, size, offset, flags);
 	PROXY_NOTSUP_RET
 }
 
