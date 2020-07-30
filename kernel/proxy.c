@@ -24,13 +24,11 @@
 	PROXY_NO_BACKEND \
 	return -EINVAL;
 
-#define PROXY_NOTSUP_RET \
-	PROXY_NO_BACKEND \
-	return -ENOTSUPP;
-
 #define PROXY_RET(x) \
 	PROXY_NO_BACKEND \
 	return x;
+
+#define PROXY_NOTSUP_RET PROXY_RET(-ENOTSUPP)
 
 #define PASS_TO_VFS(vfsop, args...) \
 	{ \
@@ -79,67 +77,41 @@ static void proxy_show_fdinfo(struct seq_file *m, struct file *proxy)
 	PROXY_NO_BACKEND
 }
 
-// FIXME
-static int proxy_flock (struct file *proxy, int flags, struct file_lock *lock)
-{
-	PROXY_INTRO
-	if (target->f_op->flock)
-		return target->f_op->flock(target, flags, lock);
-	PROXY_NOTSUP_RET
+#define PASS_TO_FILE(opname, defret, args...) \
+{ \
+	PROXY_INTRO \
+	if (target->f_op->opname) \
+		return target->f_op->opname(args); \
+	PROXY_RET(defret); \
 }
+
+// FIXME
+static int proxy_flock (struct file *proxy, int flags, struct file_lock *fl)
+	PASS_TO_FILE(flock, -EOPNOTSUPP, target, flags, fl);
 
 // FIXME
 static ssize_t proxy_dedupe_file_range(struct file *proxy, u64 loff, u64 olen,
 				       struct file *dst_file, u64 dst_loff)
-{
-	PROXY_INTRO
-	if (target->f_op->dedupe_file_range)
-		return target->f_op->dedupe_file_range(target, loff, olen,
-						       dst_file, dst_loff);
-	PROXY_RET(-EINVAL);
-}
+	PASS_TO_FILE(dedupe_file_range, -EINVAL, target, loff, olen, dst_file,
+		     dst_loff);
 
 static int proxy_flush (struct file *proxy, fl_owner_t id)
-{
-	PROXY_INTRO
-	if (target->f_op->flush)
-		return target->f_op->flush(target, id);
-	PROXY_RET(0);
-}
+	PASS_TO_FILE(flush, 0, target, id);
 
-static long proxy_compat_ioctl (struct file *proxy, unsigned int a, unsigned long b)
-{
-	PROXY_INTRO
-	if (target->f_op->compat_ioctl)
-		return target->f_op->compat_ioctl(target, a, b);
-	PROXY_RET(-ENOIOCTLCMD);
-}
+static long proxy_compat_ioctl (struct file *proxy, unsigned int cmd,
+				unsigned long arg)
+	PASS_TO_FILE(compat_ioctl, -ENOIOCTLCMD, target, cmd, arg);
 
-static int proxy_fasync (int x, struct file *proxy, int y)
-{
-	PROXY_INTRO
-	if (target->f_op->fasync)
-		return target->f_op->fasync(x, target, y);
-	PROXY_RET(0)
-}
+static int proxy_fasync (int fd, struct file *proxy, int on)
+	PASS_TO_FILE(fasync, 0, fd, target, on);
 
-static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int x,
-			       size_t size, loff_t *offset, int flags)
-{
-	PROXY_INTRO
-	if (target->f_op->sendpage)
-		return target->f_op->sendpage(target, page, x, size, offset, flags);
-	PROXY_RET(-EINVAL);
-}
+static ssize_t proxy_sendpage (struct file *proxy, struct page *page, int offs,
+			       size_t len, loff_t *pos, int more)
+	PASS_TO_FILE(sendpage, -EINVAL, target, page, offs, len, pos, more);
 
-static unsigned int proxy_poll (struct file *proxy, struct poll_table_struct *poll)
-{
-	PROXY_INTRO
-	if (target->f_op->poll)
-		return target->f_op->poll(target, poll);
+static unsigned int proxy_poll (struct file *proxy, struct poll_table_struct *pt)
 	// FIXME: should we return -EPERM instead ?
-	PROXY_RET(0)
-}
+	PASS_TO_FILE(poll, 0, target, pt);
 
 /* file operations with special implementation */
 
@@ -185,16 +157,17 @@ static int proxy_mmap (struct file *proxy, struct vm_area_struct *vma)
 	PROXY_INTRO
 	if (target->f_op->mmap)
 		return target->f_op->mmap(target, vma);
-	PROXY_NOTSUP_RET
+	PROXY_RET(-EOPNOTSUPP);
 }
 
+//FIXME
 /* not implemented yet
 static int proxy_check_flags(int flags)
 {
 	PROXY_INTRO
 	if (target->f_op->check_flags)
 		return target->f_op->check_flags(target, flags);
-	PROXY_NOTSUP_RET
+	PROXY_RET(-EOPNOTSUPP);
 }
 */
 
@@ -204,18 +177,15 @@ static ssize_t proxy_splice_read(struct file *proxy, loff_t *off, struct pipe_in
 	PROXY_INTRO
 	if (target->f_op->splice_read)
 		return target->f_op->splice_read(target, off, info, size, flags);
-	PROXY_NOTSUP_RET
+	PROXY_RET(-EOPNOTSUPP);
 }
 
-// FIXME
-
-// FIXME
 static long proxy_fallocate(struct file *proxy, int mode, loff_t offset, loff_t len)
 {
 	PROXY_INTRO
 	if (target->f_op->fallocate)
 		return target->f_op->fallocate(target, mode, offset, len);
-	PROXY_NOTSUP_RET
+	PROXY_RET(-EOPNOTSUPP);
 }
 
 #ifndef CONFIG_MMU
