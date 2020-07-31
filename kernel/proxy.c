@@ -13,15 +13,14 @@
 	struct srvfs_fileref *fileref = proxy->private_data; \
 	struct file *target = fileref->file; \
 	(void)(target); \
-	pr_info("%s()\n", __FUNCTION__);
 
 #define PROXY_NO_BACKEND \
-	pr_info("%s() no backend file handler\n", __FUNCTION__);
+	pr_info("%s() no backend file handler\n", __FUNCTION__); \
+	BUG_ON(1)
 
 #define PROXY_PASS_FILE(opname, args...) \
 	PROXY_INTRO \
 	if (target->f_op->opname) { \
-		pr_info("proxy: %s() calling: %pF\n", __FUNCTION__, target->f_op->opname); \
 		return target->f_op->opname(args); \
 	} \
 	PROXY_RET(-EOPNOTSUPP); \
@@ -175,7 +174,6 @@ static int proxy_release(struct inode *inode, struct file *proxy)
 {
 	PROXY_INTRO
 	(void)(inode);
-	pr_info("closing proxy inode_id=%ld\n", inode->i_ino);
 	srvfs_fileref_put(fileref);
 	return 0;
 }
@@ -299,14 +297,10 @@ void srvfs_proxy_fill_fops(struct file *file)
 #endif
 
 #ifdef CONFIG_SRVFS_VFS_READWRITE
-	if (!fileref->f_ops.read) {
-		pr_info("read() op undefined. using vfs_read()\n");
+	if (!fileref->f_ops.read)
 		fileref->f_ops.read = proxy_vfs_read;
-	}
-	if (!fileref->f_ops.write) {
-		pr_info("write() op undefined. using vfs_write()\n");
+	if (!fileref->f_ops.write)
 		fileref->f_ops.write = proxy_vfs_write;
-	}
 #endif
 
 	TEST_FILEOP(check_flags);
