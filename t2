@@ -17,7 +17,7 @@ log_info "catting frontend file"
 cat $TEST_FRONTEND
 
 log_info "appending to frontend file"
-echo "written via frontend" >> $TEST_FRONTEND
+echo "written into frontend" >> $TEST_FRONTEND
 
 log_info "catting backend"
 cat $TEST_BACKEND

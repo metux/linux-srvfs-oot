@@ -54,6 +54,16 @@ static ssize_t proxy_write(struct file *proxy, const char __user *buf,
 			   size_t len, loff_t *offset)
 	PASS_TO_FILE(write, target, buf, len, offset);
 
+#ifdef CONFIG_SRVFS_VFS_READWRITE
+static ssize_t proxy_vfs_read(struct file *proxy, char __user *buf, size_t len,
+			      loff_t *offset)
+	PASS_TO_VFS(vfs_read, target, buf, len, offset);
+
+static ssize_t proxy_vfs_write(struct file *proxy, const char __user *buf,
+			       size_t len, loff_t *offset)
+	PASS_TO_VFS(vfs_write, target, buf, len, offset);
+#endif
+
 static long proxy_unlocked_ioctl(struct file *proxy, unsigned int cmd,
 				 unsigned long arg)
 	PASS_TO_FILE(unlocked_ioctl, target, cmd, arg);
@@ -286,6 +296,17 @@ void srvfs_proxy_fill_fops(struct file *file)
 	COPY_FILEOP(iterate_shared);
 #ifndef CONFIG_MMU
 	COPY_FILEOP(mmap_capabilities);
+#endif
+
+#ifdef CONFIG_SRVFS_VFS_READWRITE
+	if (!fileref->f_ops.read) {
+		pr_info("read() op undefined. using vfs_read()\n");
+		fileref->f_ops.read = proxy_vfs_read;
+	}
+	if (!fileref->f_ops.write) {
+		pr_info("write() op undefined. using vfs_write()\n");
+		fileref->f_ops.write = proxy_vfs_write;
+	}
 #endif
 
 	TEST_FILEOP(check_flags);

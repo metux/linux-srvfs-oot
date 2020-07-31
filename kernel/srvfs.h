@@ -9,6 +9,8 @@
 
 #define SRVFS_MAGIC 0x29980123
 
+#define CONFIG_SRVFS_VFS_READWRITE
+
 struct srvfs_fileref {
 	atomic_t counter;
 	int mode;
