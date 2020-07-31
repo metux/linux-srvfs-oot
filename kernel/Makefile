@@ -8,8 +8,7 @@ srvfs-objs := \
 	super.o \
 	root.o \
 	proxy.o \
-	fileref.o \
-	kernlib.o
+	fileref.o
 
 KVER := $(shell uname -r)
 KPATH := /lib/modules/$(KVER)/build
